@@ -1,3 +1,4 @@
+import { Toaster } from 'sonner';
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
@@ -24,6 +25,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-cream">
+      <Toaster position="top-right" richColors closeButton />
       <Navbar />
       <main className="flex-1">
         <Routes>

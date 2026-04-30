@@ -1,39 +1,34 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { db, storage } = require('../config/firebase');
+const { db } = require('../config/firebase');
 const { authenticate, isAdmin } = require('../middleware/auth');
-const { v4: uuidv4 } = require('uuid');
+const { mealSchema, paginationSchema, validate } = require('../validators/schemas');
+const { optimizeAndUpload } = require('../services/image');
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// GET /api/meals — public: list all meals (optionally by category)
+// GET /api/meals — public: paginated, filterable
 router.get('/', async (req, res) => {
   try {
-    let query = db.collection('meals').orderBy('createdAt', 'desc');
-    if (req.query.category) {
-      query = query.where('category', '==', req.query.category);
+    const { limit, cursor } = paginationSchema.parse(req.query);
+    let query = db.collection('meals').orderBy('createdAt', 'desc').limit(limit + 1);
+    if (req.query.category) query = query.where('category', '==', req.query.category);
+    if (cursor) {
+      const cursorDoc = await db.collection('meals').doc(cursor).get();
+      if (cursorDoc.exists) query = query.startAfter(cursorDoc);
     }
     const snapshot = await query.get();
-    const meals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    res.json(meals);
+    const meals = snapshot.docs.slice(0, limit).map(d => ({ id: d.id, ...d.data() }));
+    const categoriesSnap = await db.collection('meals').get();
+    const categories = [...new Set(categoriesSnap.docs.map(d => d.data().category).filter(Boolean))];
+    res.json({ meals, categories, nextCursor: snapshot.docs.length > limit ? snapshot.docs[limit - 1].id : null, hasMore: snapshot.docs.length > limit });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/meals/categories — public: list distinct meal categories
-router.get('/categories/list', async (req, res) => {
-  try {
-    const snapshot = await db.collection('meals').get();
-    const categories = [...new Set(snapshot.docs.map(doc => doc.data().category).filter(Boolean))];
-    res.json(categories);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/meals/:id — public: single meal
+// GET /api/meals/:id
 router.get('/:id', async (req, res) => {
   try {
     const doc = await db.collection('meals').doc(req.params.id).get();
@@ -44,31 +39,16 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/meals — admin: create meal with photo
-router.post('/', authenticate, isAdmin, upload.single('photo'), async (req, res) => {
+// POST /api/meals — admin: create with optimized photo
+router.post('/', authenticate, isAdmin, upload.single('photo'), validate(mealSchema), async (req, res) => {
   try {
-    const { name, description, price, category, dietary } = req.body;
-    let photoUrl = '';
-
+    const { name, description, price, category, dietary } = req.validated;
+    let photo = null;
     if (req.file) {
-      const filename = `meals/${uuidv4()}-${req.file.originalname}`;
-      const blob = storage.file(filename);
-      await blob.save(req.file.buffer, { contentType: req.file.mimetype });
-      await blob.makePublic();
-      photoUrl = `https://storage.googleapis.com/${storage.name}/${filename}`;
+      const urls = await optimizeAndUpload(req.file.buffer, req.file.originalname, 'meals');
+      photo = urls;
     }
-
-    const meal = {
-      name,
-      description,
-      price: parseFloat(price),
-      category: category || 'main',
-      dietary: JSON.parse(dietary || '[]'),
-      photo: photoUrl,
-      available: true,
-      createdAt: new Date().toISOString(),
-    };
-
+    const meal = { name, description, price, category: category || 'main', dietary: dietary || [], photo, available: true, createdAt: new Date().toISOString() };
     const docRef = await db.collection('meals').add(meal);
     res.status(201).json({ id: docRef.id, ...meal });
   } catch (err) {
@@ -76,27 +56,20 @@ router.post('/', authenticate, isAdmin, upload.single('photo'), async (req, res)
   }
 });
 
-// PUT /api/meals/:id — admin: update meal
+// PUT /api/meals/:id — admin
 router.put('/:id', authenticate, isAdmin, upload.single('photo'), async (req, res) => {
   try {
-    const { name, description, price, category, dietary, available } = req.body;
     const update = {};
-
-    if (name) update.name = name;
-    if (description) update.description = description;
-    if (price) update.price = parseFloat(price);
-    if (category) update.category = category;
-    if (dietary) update.dietary = JSON.parse(dietary);
-    if (available !== undefined) update.available = available === 'true';
-
+    if (req.body.name) update.name = req.body.name;
+    if (req.body.description) update.description = req.body.description;
+    if (req.body.price) update.price = parseFloat(req.body.price);
+    if (req.body.category) update.category = req.body.category;
+    if (req.body.dietary) update.dietary = typeof req.body.dietary === 'string' ? JSON.parse(req.body.dietary) : req.body.dietary;
+    if (req.body.available !== undefined) update.available = req.body.available === 'true' || req.body.available === true;
     if (req.file) {
-      const filename = `meals/${uuidv4()}-${req.file.originalname}`;
-      const blob = storage.file(filename);
-      await blob.save(req.file.buffer, { contentType: req.file.mimetype });
-      await blob.makePublic();
-      update.photo = `https://storage.googleapis.com/${storage.name}/${filename}`;
+      const urls = await optimizeAndUpload(req.file.buffer, req.file.originalname, 'meals');
+      update.photo = urls;
     }
-
     await db.collection('meals').doc(req.params.id).update(update);
     const doc = await db.collection('meals').doc(req.params.id).get();
     res.json({ id: doc.id, ...doc.data() });
@@ -105,7 +78,7 @@ router.put('/:id', authenticate, isAdmin, upload.single('photo'), async (req, re
   }
 });
 
-// DELETE /api/meals/:id — admin: delete meal
+// DELETE /api/meals/:id
 router.delete('/:id', authenticate, isAdmin, async (req, res) => {
   try {
     await db.collection('meals').doc(req.params.id).delete();
