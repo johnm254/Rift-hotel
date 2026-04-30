@@ -12,7 +12,12 @@ export default function Meals() {
     queryKey: ['meals', category],
     queryFn: () => {
       const params = category ? `/meals?category=${category}` : '/meals';
-      return api.get(params).then(r => r.data).catch(() =>
+      return api.get(params).then(r => {
+        const d = r.data;
+        const arr = Array.isArray(d) ? d : (d.meals || d.data || []);
+        const result = arr.length > 0 ? arr : mockMeals;
+        return category ? result.filter(m => m.category === category) : result;
+      }).catch(() =>
         category ? mockMeals.filter(m => m.category === category) : mockMeals
       );
     },

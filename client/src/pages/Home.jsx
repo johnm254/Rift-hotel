@@ -1,53 +1,121 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import Loading from '../components/Loading';
 import { mockRooms, mockMeals } from '../lib/mockData';
 
+// Testimonials data
+const testimonials = [
+  { name: 'Sarah K.', country: 'Kenya', rating: 5, text: 'Absolutely breathtaking. The Presidential Suite exceeded every expectation — the butler service, the ocean view, the food. We will be back.', stay: 'Presidential Ocean Suite', avatar: 'S' },
+  { name: 'James & Amina', country: 'UK', rating: 5, text: 'Our honeymoon was perfect. Rose petals, champagne, a private dinner under the stars. Azura Haven made it magical.', stay: 'Honeymoon Retreat', avatar: 'J' },
+  { name: 'David L.', country: 'USA', rating: 5, text: 'I travel for business constantly. This is the first hotel where I genuinely did not want to leave. The Executive Room is world-class.', stay: 'Executive Business Room', avatar: 'D' },
+  { name: 'Faith N.', country: 'Kenya', rating: 5, text: 'Brought the whole family — three kids included. The Safari Suite was incredible. Kids are still talking about it weeks later.', stay: 'Safari Family Suite', avatar: 'F' },
+];
+
 export default function Home() {
+  const navigate = useNavigate();
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
+  const [guests, setGuests] = useState('2');
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (checkIn) params.set('checkIn', checkIn);
+    if (checkOut) params.set('checkOut', checkOut);
+    if (guests) params.set('guests', guests);
+    navigate(`/rooms?${params.toString()}`);
+  };
   const { data: rooms, isLoading } = useQuery({
     queryKey: ['rooms'],
-    queryFn: () => api.get('/rooms').then(r => r.data).catch(() => mockRooms),
+    queryFn: () => api.get('/rooms').then(r => {
+      const d = r.data;
+      const arr = Array.isArray(d) ? d : (d.rooms || d.data || []);
+      return arr.length > 0 ? arr : mockRooms;
+    }).catch(() => mockRooms),
   });
 
   const { data: meals } = useQuery({
     queryKey: ['meals'],
-    queryFn: () => api.get('/meals').then(r => r.data).catch(() => mockMeals),
+    queryFn: () => api.get('/meals').then(r => {
+      const d = r.data;
+      const arr = Array.isArray(d) ? d : (d.meals || d.data || []);
+      return arr.length > 0 ? arr : mockMeals;
+    }).catch(() => mockMeals),
   });
 
   return (
     <div>
       {/* ===== HERO ===== */}
-      <section className="hero-gradient text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: 'radial-gradient(circle at 20% 30%, #C9A96E 1px, transparent 1px)',
-          backgroundSize: '50px 50px'
-        }}></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32 relative">
-          <div className="max-w-2xl">
-            <span className="inline-block bg-gold/20 text-gold px-4 py-1.5 rounded-full text-sm font-medium mb-6 tracking-wide uppercase">
+      <section className="relative text-white overflow-hidden min-h-[85vh] flex flex-col">
+        {/* Background image */}
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1800&q=80"
+            alt="Azura Haven Hotel"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-navy/90 via-navy/70 to-navy/30"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-navy/60 via-transparent to-transparent"></div>
+        </div>
+
+        <div className="relative flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 flex items-center">
+          <div className="w-full max-w-3xl">
+            <span className="inline-block bg-gold/20 backdrop-blur text-gold border border-gold/30 px-4 py-1.5 rounded-full text-sm font-medium mb-6 tracking-wide uppercase">
               Welcome to Paradise
             </span>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold mb-6 leading-tight">
               Experience <span className="text-gold">Luxury</span><br/>Like Never Before
             </h1>
-            <p className="text-lg text-cream/70 mb-8 leading-relaxed max-w-lg">
-              Nestled in the heart of Kenya, Azura Haven offers world-class hospitality, 
+            <p className="text-lg text-cream/80 mb-8 leading-relaxed max-w-lg">
+              Nestled in the heart of Kenya, Azura Haven offers world-class hospitality,
               exquisite dining, and unforgettable experiences.
             </p>
-            <div className="flex flex-wrap gap-4">
-              <Link to="/rooms" className="bg-gold hover:bg-gold-light text-navy font-bold px-8 py-4 rounded-lg text-sm uppercase tracking-widest transition-all shadow-lg shadow-gold/20">
-                Explore Rooms
+
+            {/* ── Date Search Widget ── */}
+            <form onSubmit={handleSearch} className="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-3 flex flex-col sm:flex-row gap-2 max-w-2xl">
+              <div className="flex-1 bg-white/10 hover:bg-white/15 rounded-xl px-4 py-3 transition-colors">
+                <label className="block text-gold text-xs font-semibold uppercase tracking-widest mb-1">Check-in</label>
+                <input type="date" value={checkIn} onChange={e => setCheckIn(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full bg-transparent text-white text-sm focus:outline-none placeholder-cream/40 [color-scheme:dark]" />
+              </div>
+              <div className="w-px bg-white/20 hidden sm:block self-stretch my-1" />
+              <div className="flex-1 bg-white/10 hover:bg-white/15 rounded-xl px-4 py-3 transition-colors">
+                <label className="block text-gold text-xs font-semibold uppercase tracking-widest mb-1">Check-out</label>
+                <input type="date" value={checkOut} onChange={e => setCheckOut(e.target.value)}
+                  min={checkIn || new Date().toISOString().split('T')[0]}
+                  className="w-full bg-transparent text-white text-sm focus:outline-none [color-scheme:dark]" />
+              </div>
+              <div className="w-px bg-white/20 hidden sm:block self-stretch my-1" />
+              <div className="bg-white/10 hover:bg-white/15 rounded-xl px-4 py-3 transition-colors min-w-[100px]">
+                <label className="block text-gold text-xs font-semibold uppercase tracking-widest mb-1">Guests</label>
+                <select value={guests} onChange={e => setGuests(e.target.value)}
+                  className="w-full bg-transparent text-white text-sm focus:outline-none [color-scheme:dark]">
+                  {[1,2,3,4,5,6].map(n => <option key={n} value={n} className="text-navy bg-white">{n} guest{n > 1 ? 's' : ''}</option>)}
+                </select>
+              </div>
+              <button type="submit"
+                className="bg-gold hover:bg-gold-light text-navy font-bold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg shadow-gold/30 whitespace-nowrap">
+                Search
+              </button>
+            </form>
+
+            <div className="flex flex-wrap gap-4 mt-5">
+              <Link to="/offers" className="text-cream/70 hover:text-gold text-sm font-medium transition-colors flex items-center gap-1.5">
+                🎁 View special offers →
               </Link>
-              <Link to="/meals" className="border-2 border-cream/30 hover:border-gold text-cream hover:text-gold font-semibold px-8 py-4 rounded-lg text-sm uppercase tracking-widest transition-all">
-                View Dining
+              <Link to="/about" className="text-cream/70 hover:text-gold text-sm font-medium transition-colors flex items-center gap-1.5">
+                🏨 About Azura Haven →
               </Link>
             </div>
           </div>
         </div>
 
         {/* Stats bar */}
-        <div className="bg-navy-dark/60 backdrop-blur border-t border-gold/10">
+        <div className="relative bg-navy/80 backdrop-blur border-t border-gold/20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <Stat label="Rooms & Suites" value={rooms?.length || '—'} />
             <Stat label="Dining Options" value={meals?.length || '—'} />
@@ -111,6 +179,65 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ===== TESTIMONIALS ===== */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center mb-12">
+          <span className="text-gold text-sm uppercase tracking-widest font-semibold">Guest Stories</span>
+          <h2 className="text-3xl md:text-4xl font-serif font-bold text-navy mt-2 mb-4">
+            What Our Guests Say
+          </h2>
+          <div className="flex justify-center gap-1 mb-2">
+            {[1,2,3,4,5].map(s => <span key={s} className="text-gold text-xl">★</span>)}
+          </div>
+          <p className="text-muted text-sm">4.9 out of 5 · Based on 500+ reviews</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {testimonials.map((t, i) => (
+            <div key={i}
+              onClick={() => setActiveTestimonial(i)}
+              className={`bg-white rounded-2xl p-6 border-2 cursor-pointer transition-all duration-300 hover:shadow-lg ${activeTestimonial === i ? 'border-gold shadow-lg shadow-gold/10' : 'border-cream-dark'}`}>
+              <div className="flex gap-0.5 mb-3">
+                {[1,2,3,4,5].map(s => <span key={s} className="text-gold text-sm">★</span>)}
+              </div>
+              <p className="text-muted text-sm leading-relaxed line-clamp-4 mb-4">"{t.text}"</p>
+              <div className="flex items-center gap-3 mt-auto">
+                <div className="w-9 h-9 rounded-full bg-gold/20 flex items-center justify-center text-gold font-bold text-sm flex-shrink-0">
+                  {t.avatar}
+                </div>
+                <div>
+                  <div className="font-semibold text-navy text-sm">{t.name}</div>
+                  <div className="text-xs text-muted">{t.stay}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Featured testimonial */}
+        <div className="bg-navy rounded-2xl p-8 md:p-12 text-center max-w-3xl mx-auto">
+          <div className="text-4xl mb-4">❝</div>
+          <p className="text-cream/90 text-lg md:text-xl leading-relaxed font-serif italic mb-6">
+            {testimonials[activeTestimonial].text}
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center text-gold font-bold text-lg">
+              {testimonials[activeTestimonial].avatar}
+            </div>
+            <div className="text-left">
+              <div className="font-bold text-gold">{testimonials[activeTestimonial].name}</div>
+              <div className="text-cream/50 text-sm">{testimonials[activeTestimonial].country} · {testimonials[activeTestimonial].stay}</div>
+            </div>
+          </div>
+          <div className="flex justify-center gap-2 mt-6">
+            {testimonials.map((_, i) => (
+              <button key={i} onClick={() => setActiveTestimonial(i)}
+                className={`w-2 h-2 rounded-full transition-all ${i === activeTestimonial ? 'bg-gold w-6' : 'bg-cream/30 hover:bg-cream/50'}`} />
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ===== CTA ===== */}
       <section className="hero-gradient py-20">
         <div className="max-w-4xl mx-auto px-4 text-center">
@@ -139,11 +266,15 @@ function Stat({ label, value }) {
 }
 
 function RoomCard({ room }) {
+  const photo = room.photos?.[0]
+    ? (typeof room.photos[0] === 'string' ? room.photos[0] : room.photos[0].thumb)
+    : 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=600';
+
   return (
     <Link to={`/rooms/${room.id}`} className="group block bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-cream-dark">
       <div className="relative h-56 overflow-hidden">
-        <img 
-          src={room.photos?.[0] || 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=600'} 
+        <img
+          src={photo}
           alt={room.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />

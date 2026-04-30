@@ -13,10 +13,16 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Booking from './pages/Booking';
 import Profile from './pages/Profile';
+import About from './pages/About';
+import Contact from './pages/Contact';
+import Offers from './pages/Offers';
+import FAQ from './pages/FAQ';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminRooms from './pages/admin/Rooms';
 import AdminMeals from './pages/admin/Meals';
 import AdminBookings from './pages/admin/Bookings';
+import AdminGuests from './pages/admin/Guests';
+import NotFound from './pages/NotFound';
 
 export default function App() {
   const { loading } = useAuth();
@@ -33,6 +39,10 @@ export default function App() {
           <Route path="/rooms" element={<Rooms />} />
           <Route path="/rooms/:id" element={<RoomDetail />} />
           <Route path="/meals" element={<Meals />} />
+          <Route path="/offers" element={<Offers />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/faq" element={<FAQ />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/booking/:roomId" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
@@ -41,6 +51,8 @@ export default function App() {
           <Route path="/admin/rooms" element={<ProtectedRoute admin><AdminRooms /></ProtectedRoute>} />
           <Route path="/admin/meals" element={<ProtectedRoute admin><AdminMeals /></ProtectedRoute>} />
           <Route path="/admin/bookings" element={<ProtectedRoute admin><AdminBookings /></ProtectedRoute>} />
+          <Route path="/admin/guests" element={<ProtectedRoute admin><AdminGuests /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
       <Footer />

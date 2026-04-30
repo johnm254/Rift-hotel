@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import api from '../../lib/api';
 import Loading from '../../components/Loading';
 
@@ -11,11 +12,13 @@ export default function AdminMeals() {
     name: '', description: '', price: '', category: 'main', dietary: '', available: 'true'
   });
   const [photo, setPhoto] = useState(null);
-  const [message, setMessage] = useState('');
 
   const { data: meals, isLoading } = useQuery({
-    queryKey: ['meals'],
-    queryFn: () => api.get('/meals').then(r => r.data),
+    queryKey: ['adminMeals'],
+    queryFn: () => api.get('/meals').then(r => {
+      const d = r.data;
+      return Array.isArray(d) ? d : (d.meals || d.data || []);
+    }).catch(() => []),
   });
 
   const saveMeal = useMutation({
@@ -24,17 +27,20 @@ export default function AdminMeals() {
       return api.post('/meals', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['meals']);
+      queryClient.invalidateQueries(['adminMeals']);
       resetForm();
-      setMessage(editing ? 'Meal updated!' : 'Meal created!');
-      setTimeout(() => setMessage(''), 3000);
+      toast.success(editing ? 'Meal updated!' : 'Meal created!');
     },
-    onError: (err) => setMessage('Error: ' + (err.response?.data?.error || 'Failed'))
+    onError: (err) => toast.error(err.response?.data?.error || 'Failed to save meal'),
   });
 
   const deleteMeal = useMutation({
     mutationFn: (id) => api.delete(`/meals/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries(['meals']); setMessage('Meal deleted'); setTimeout(() => setMessage(''), 3000); }
+    onSuccess: () => {
+      queryClient.invalidateQueries(['adminMeals']);
+      toast.success('Meal deleted');
+    },
+    onError: () => toast.error('Failed to delete meal'),
   });
 
   const resetForm = () => {
@@ -79,12 +85,6 @@ export default function AdminMeals() {
           {showForm ? '✕ Cancel' : '+ Add Meal'}
         </button>
       </div>
-
-      {message && (
-        <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium ${message.includes('Error') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
-          {message}
-        </div>
-      )}
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl border border-cream-dark p-6 mb-8 space-y-4">
