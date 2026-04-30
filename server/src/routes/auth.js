@@ -2,13 +2,32 @@ const express = require('express');
 const router = express.Router();
 const { db, auth } = require('../config/firebase');
 const { authenticate } = require('../middleware/auth');
-const { registerSchema, validate } = require('../validators/schemas');
 const { sendWelcomeEmail } = require('../services/email');
 
 // POST /api/auth/register
-router.post('/register', validate(registerSchema), async (req, res) => {
+router.post('/register', async (req, res) => {
   try {
-    const { email, password, name } = req.validated;
+    const { email, password, name, googleUid } = req.body;
+
+    if (!email || !name) {
+      return res.status(400).json({ error: 'Email and name are required' });
+    }
+
+    // Google sign-in: user already exists in Firebase Auth, just save to Firestore
+    if (googleUid) {
+      const existing = await db.collection('users').doc(googleUid).get();
+      if (existing.exists) {
+        return res.status(200).json({ uid: googleUid, email, name, ...existing.data() });
+      }
+      await db.collection('users').doc(googleUid).set({ email, name, role: 'guest', createdAt: new Date().toISOString() });
+      return res.status(201).json({ uid: googleUid, email, name });
+    }
+
+    // Email/password registration
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+
     const userRecord = await auth.createUser({ email, password, displayName: name });
     await db.collection('users').doc(userRecord.uid).set({ email, name, role: 'guest', createdAt: new Date().toISOString() });
     sendWelcomeEmail(email, name).catch(e => console.warn('Welcome email failed:', e.message));
