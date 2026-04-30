@@ -93,23 +93,26 @@ router.post('/', authenticate, validate(bookingSchema), async (req, res) => {
   }
 });
 
-// PATCH /api/bookings/:id/status — admin: approve/reject + email
+// PATCH /api/bookings/:id/status — admin: approve/reject/check-out + email
 router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
   try {
     const { status } = req.body;
-    if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ error: 'Status must be approved or rejected' });
+    if (!['approved', 'rejected', 'checked-out'].includes(status)) {
+      return res.status(400).json({ error: 'Status must be approved, rejected, or checked-out' });
     }
 
-    await db.collection('bookings').doc(req.params.id).update({
-      status, updatedAt: new Date().toISOString(), updatedBy: req.user.email,
-    });
+    const updates = { status, updatedAt: new Date().toISOString(), updatedBy: req.user.email };
+    if (status === 'checked-out') updates.checkedOutAt = new Date().toISOString();
+
+    await db.collection('bookings').doc(req.params.id).update(updates);
 
     const doc = await db.collection('bookings').doc(req.params.id).get();
     const booking = { id: doc.id, ...doc.data() };
 
-    // Send status update email
-    sendStatusUpdate(booking.userEmail, booking, status).catch(e => console.warn('Email send failed:', e.message));
+    // Send status update email (not for check-out)
+    if (status !== 'checked-out') {
+      sendStatusUpdate(booking.userEmail, booking, status).catch(e => console.warn('Email send failed:', e.message));
+    }
 
     res.json(booking);
   } catch (err) {

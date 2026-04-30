@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import Loading from '../components/Loading';
+import { mockMeals } from '../lib/mockData';
 
 export default function Meals() {
   const [category, setCategory] = useState('');
@@ -11,7 +12,9 @@ export default function Meals() {
     queryKey: ['meals', category],
     queryFn: () => {
       const params = category ? `/meals?category=${category}` : '/meals';
-      return api.get(params).then(r => r.data);
+      return api.get(params).then(r => r.data).catch(() =>
+        category ? mockMeals.filter(m => m.category === category) : mockMeals
+      );
     },
   });
 

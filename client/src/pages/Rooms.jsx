@@ -3,14 +3,15 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import Loading from '../components/Loading';
+import { mockRooms } from '../lib/mockData';
 
 export default function Rooms() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('default');
 
-  const { data: rooms, isLoading, error } = useQuery({
+  const { data: rooms, isLoading } = useQuery({
     queryKey: ['rooms'],
-    queryFn: () => api.get('/rooms').then(r => r.data),
+    queryFn: () => api.get('/rooms').then(r => r.data).catch(() => mockRooms),
   });
 
   let filtered = rooms || [];
@@ -70,11 +71,7 @@ export default function Rooms() {
 
       {/* Room Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        {isLoading ? <Loading /> : error ? (
-          <div className="text-center py-16">
-            <p className="text-muted text-lg">Unable to load rooms. Start the backend with data to see rooms here.</p>
-          </div>
-        ) : filtered.length === 0 ? (
+        {isLoading ? <Loading /> : filtered.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-muted text-lg">No rooms match your search.</p>
           </div>

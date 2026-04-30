@@ -31,6 +31,7 @@ export default function AdminBookings() {
   const pending = (bookings || []).filter(b => b.status === 'pending');
   const approved = (bookings || []).filter(b => b.status === 'approved');
   const rejected = (bookings || []).filter(b => b.status === 'rejected');
+  const checkedOut = (bookings || []).filter(b => b.status === 'checked-out');
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -48,7 +49,7 @@ export default function AdminBookings() {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <button onClick={() => setFilter('pending')}
           className={`rounded-2xl p-5 border-2 text-left transition-all ${filter === 'pending' ? 'border-yellow-400 bg-yellow-50' : 'border-cream-dark bg-white hover:border-yellow-300'}`}>
           <div className="text-3xl font-bold text-yellow-600">{pending.length}</div>
@@ -63,6 +64,11 @@ export default function AdminBookings() {
           className={`rounded-2xl p-5 border-2 text-left transition-all ${filter === 'rejected' ? 'border-red-400 bg-red-50' : 'border-cream-dark bg-white hover:border-red-300'}`}>
           <div className="text-3xl font-bold text-red-600">{rejected.length}</div>
           <div className="text-sm text-muted mt-1">Rejected</div>
+        </button>
+        <button onClick={() => setFilter('checked-out')}
+          className={`rounded-2xl p-5 border-2 text-left transition-all ${filter === 'checked-out' ? 'border-gray-400 bg-gray-50' : 'border-cream-dark bg-white hover:border-gray-300'}`}>
+          <div className="text-3xl font-bold text-gray-600">{checkedOut.length}</div>
+          <div className="text-sm text-muted mt-1">Checked Out</div>
         </button>
       </div>
 
@@ -101,8 +107,8 @@ export default function AdminBookings() {
                 )}
               </div>
 
-              {b.status === 'pending' && (
-                <div className="flex gap-2 items-start md:flex-col">
+              <div className="flex gap-2 items-start md:flex-col">
+                {b.status === 'pending' && (<>
                   <button onClick={() => updateStatus.mutate({ id: b.id, status: 'approved' })}
                     disabled={updateStatus.isPending}
                     className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap">
@@ -113,8 +119,20 @@ export default function AdminBookings() {
                     className="bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap">
                     ✕ Reject
                   </button>
-                </div>
-              )}
+                </>)}
+                {b.status === 'approved' && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Check out ${b.userName} from ${b.roomName}?`)) {
+                        updateStatus.mutate({ id: b.id, status: 'checked-out' });
+                      }
+                    }}
+                    disabled={updateStatus.isPending}
+                    className="bg-navy hover:bg-navy-light disabled:bg-navy/40 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap">
+                    🚪 Check Out
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -134,6 +152,7 @@ function StatusBadge({ status }) {
     pending: 'bg-yellow-100 text-yellow-800',
     approved: 'bg-green-100 text-green-800',
     rejected: 'bg-red-100 text-red-800',
+    'checked-out': 'bg-gray-100 text-gray-700',
   };
   return (
     <span className={`text-xs font-semibold px-3 py-1 rounded-full uppercase ${styles[status] || 'bg-gray-100 text-gray-700'}`}>

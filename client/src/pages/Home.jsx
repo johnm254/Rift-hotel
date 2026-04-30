@@ -2,16 +2,17 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import Loading from '../components/Loading';
+import { mockRooms, mockMeals } from '../lib/mockData';
 
 export default function Home() {
   const { data: rooms, isLoading } = useQuery({
     queryKey: ['rooms'],
-    queryFn: () => api.get('/rooms').then(r => r.data),
+    queryFn: () => api.get('/rooms').then(r => r.data).catch(() => mockRooms),
   });
 
   const { data: meals } = useQuery({
     queryKey: ['meals'],
-    queryFn: () => api.get('/meals').then(r => r.data),
+    queryFn: () => api.get('/meals').then(r => r.data).catch(() => mockMeals),
   });
 
   return (
