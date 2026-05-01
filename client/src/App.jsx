@@ -29,6 +29,7 @@ import FAQ from './pages/FAQ';
 import NotFound from './pages/NotFound';
 
 import AirportTransfer from './pages/AirportTransfer';
+import Survey from './pages/Survey';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminRooms from './pages/admin/Rooms';
 import AdminMeals from './pages/admin/Meals';
@@ -37,6 +38,7 @@ import AdminGuests from './pages/admin/Guests';
 import OccupancyCalendar from './pages/admin/OccupancyCalendar';
 import Housekeeping from './pages/admin/Housekeeping';
 import AdminPackages from './pages/admin/Packages';
+import AdminPricing from './pages/admin/Pricing';
 import AdminLayout from './components/AdminLayout';
 
 // Push notification setup
@@ -73,6 +75,7 @@ function AppContent() {
             <Route path="/admin/calendar" element={<ProtectedRoute admin><AdminLayout><OccupancyCalendar /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/housekeeping" element={<ProtectedRoute admin><AdminLayout><Housekeeping /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/packages" element={<ProtectedRoute admin><AdminLayout><AdminPackages /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/pricing" element={<ProtectedRoute admin><AdminLayout><AdminPricing /></AdminLayout></ProtectedRoute>} />
           </Routes>
         </PageWrapper>
       </>
@@ -100,6 +103,7 @@ function AppContent() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/booking/:roomId" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
+            <Route path="/survey" element={<Survey />} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

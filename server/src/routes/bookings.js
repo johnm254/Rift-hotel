@@ -162,13 +162,26 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
           await db.collection('users').doc(userId).update({
             loyaltyPoints: currentPoints + pointsEarned,
           });
-          // Log transaction
           await db.collection('loyaltyTransactions').add({
             userId, bookingId: req.params.id, points: pointsEarned,
             type: 'earned', description: `Stay at ${bookingDoc.data().roomName}`,
             createdAt: new Date().toISOString(),
           });
         }
+
+        // Send post-stay survey via SMS
+        const userDocData = await db.collection('users').doc(userId).get().catch(() => null);
+        const phone = userDocData?.data()?.phone;
+        const guestName = bookingDoc.data().userName?.split(' ')[0] || 'Guest';
+        const roomName = encodeURIComponent(bookingDoc.data().roomName || '');
+        const surveyUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/survey?booking=${req.params.id}&room=${roomName}&name=${encodeURIComponent(guestName)}`;
+        if (phone) {
+          const { sendSMS } = require('../services/sms');
+          sendSMS(phone, `Hi ${guestName}! Thank you for staying at Azura Haven. Please rate your stay: ${surveyUrl}`).catch(() => {});
+        }
+        // Also send survey link via email
+        const { sendStatusUpdate } = require('../services/email');
+        sendStatusUpdate(bookingDoc.data().userEmail, { ...bookingDoc.data(), surveyUrl }, 'checked-out').catch(() => {});
       }
     }
 

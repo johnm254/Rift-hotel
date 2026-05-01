@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { QRCodeSVG } from 'qrcode.react';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Loading from '../components/Loading';
@@ -40,12 +41,23 @@ export default function Booking() {
     ? Math.max(0, Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)))
     : 0;
   const basePrice = room ? nights * room.price : 0;
+
+  // Dynamic pricing
+  const [pricingData, setPricingData] = useState(null);
+  useEffect(() => {
+    if (!checkIn || !checkOut || !room || nights <= 0) { setPricingData(null); return; }
+    api.post('/pricing/calculate', { roomId, checkIn, checkOut, basePrice: room.price })
+      .then(r => setPricingData(r.data))
+      .catch(() => setPricingData(null));
+  }, [checkIn, checkOut, room, nights]);
+
+  const adjustedTotal = pricingData ? pricingData.totalPrice : basePrice;
   const discountAmount = promoDiscount
     ? promoDiscount.type === 'percent'
-      ? Math.round(basePrice * promoDiscount.discount / 100)
+      ? Math.round(adjustedTotal * promoDiscount.discount / 100)
       : promoDiscount.discount
     : 0;
-  const totalPrice = Math.max(0, basePrice - discountAmount);
+  const totalPrice = Math.max(0, adjustedTotal - discountAmount);
 
   const applyPromo = async () => {
     if (!promoCode.trim()) return;
@@ -235,14 +247,19 @@ export default function Booking() {
                 </div>
 
                 {nights > 0 && (
-                  <div className="bg-cream rounded-xl p-5 space-y-2">
+                  <div className="bg-cream rounded-xl p-4 sm:p-5 space-y-2">
                     <div className="flex justify-between text-sm text-muted">
                       <span>KES {room.price?.toLocaleString()} × {nights} night{nights > 1 ? 's' : ''}</span>
                       <span>KES {basePrice.toLocaleString()}</span>
                     </div>
+                    {pricingData?.appliedRules?.map(r => (
+                      <div key={r.name} className="flex justify-between text-sm text-orange-600">
+                        <span>📊 {r.name}</span><span>{r.effect}</span>
+                      </div>
+                    ))}
                     {promoDiscount && (
                       <div className="flex justify-between text-sm text-green-600">
-                        <span>🎁 Promo: {promoCode.toUpperCase()} ({promoDiscount.type === 'percent' ? `${promoDiscount.discount}% off` : `KES ${promoDiscount.discount} off`})</span>
+                        <span className="truncate mr-2">🎁 {promoCode.toUpperCase()}</span>
                         <span>− KES {discountAmount.toLocaleString()}</span>
                       </div>
                     )}
@@ -255,9 +272,9 @@ export default function Booking() {
                     <div className="flex gap-2 pt-1">
                       <input type="text" value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())}
                         placeholder="Promo code"
-                        className="flex-1 px-3 py-2 rounded-xl bg-white border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors" />
+                        className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors" />
                       <button onClick={applyPromo} disabled={promoLoading || !promoCode.trim()}
-                        className="bg-navy hover:bg-navy-light disabled:bg-navy/40 text-cream font-semibold px-4 py-2 rounded-xl text-sm transition-all">
+                        className="bg-navy hover:bg-navy-light disabled:bg-navy/40 text-cream font-semibold px-4 py-2 rounded-xl text-sm transition-all whitespace-nowrap">
                         {promoLoading ? '...' : 'Apply'}
                       </button>
                     </div>
@@ -442,6 +459,23 @@ export default function Booking() {
                     className="border-2 border-navy text-navy hover:bg-navy hover:text-cream font-semibold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all">
                     Browse More
                   </button>
+                </div>
+
+                {/* QR Code Room Key */}
+                <div className="border-t border-cream-dark pt-5">
+                  <p className="text-xs text-muted uppercase tracking-widest mb-3 text-center">Your Digital Room Key</p>
+                  <div className="flex justify-center">
+                    <div className="bg-white p-3 rounded-2xl border-2 border-gold/20 shadow-sm inline-block">
+                      <QRCodeSVG
+                        value={JSON.stringify({ bookingId: `booking-${Date.now()}`, room: room.name, checkIn, checkOut, guest: user?.name })}
+                        size={140}
+                        bgColor="#FFFFFF"
+                        fgColor="#1B2A4A"
+                        level="M"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted text-center mt-2">Show this QR code at the front desk for express check-in</p>
                 </div>
               </div>
             )}
