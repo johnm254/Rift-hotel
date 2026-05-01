@@ -35,6 +35,7 @@ app.use('/api/transfers', require('./routes/transfers'));
 app.use('/api/packages', require('./routes/packages'));
 app.use('/api/surveys', require('./routes/surveys'));
 app.use('/api/pricing', require('./routes/pricing'));
+app.use('/api/properties', require('./routes/properties'));
 
 // Health check
 app.get('/api/health', (req, res) => {

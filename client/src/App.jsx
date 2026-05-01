@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { PropertyProvider } from './context/PropertyContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Loading from './components/Loading';
@@ -39,6 +40,7 @@ import OccupancyCalendar from './pages/admin/OccupancyCalendar';
 import Housekeeping from './pages/admin/Housekeeping';
 import AdminPackages from './pages/admin/Packages';
 import AdminPricing from './pages/admin/Pricing';
+import AdminProperties from './pages/admin/Properties';
 import AdminLayout from './components/AdminLayout';
 
 // Push notification setup
@@ -76,6 +78,7 @@ function AppContent() {
             <Route path="/admin/housekeeping" element={<ProtectedRoute admin><AdminLayout><Housekeeping /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/packages" element={<ProtectedRoute admin><AdminLayout><AdminPackages /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/pricing" element={<ProtectedRoute admin><AdminLayout><AdminPricing /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/properties" element={<ProtectedRoute admin><AdminLayout><AdminProperties /></AdminLayout></ProtectedRoute>} />
           </Routes>
         </PageWrapper>
       </>
@@ -120,7 +123,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <WishlistProvider>
-        <AppContent />
+        <PropertyProvider>
+          <AppContent />
+        </PropertyProvider>
       </WishlistProvider>
     </ThemeProvider>
   );

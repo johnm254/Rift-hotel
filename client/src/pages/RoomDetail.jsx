@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
 import Loading from '../components/Loading';
+import VirtualTour from '../components/VirtualTour';
 import { mockRooms, mockReviews } from '../lib/mockData';
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
@@ -428,6 +429,7 @@ export default function RoomDetail() {
                     Currently Unavailable
                   </button>
                 )}
+                <VirtualTour tourUrl={room.tourUrl} roomName={room.name} />
                 <p className="text-center text-muted text-xs">No payment required to book. You'll be charged at check-in.</p>
               </div>
 

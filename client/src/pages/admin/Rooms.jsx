@@ -9,7 +9,7 @@ export default function AdminRooms() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
-    name: '', description: '', price: '', capacity: '2', amenities: '', available: 'true'
+    name: '', description: '', price: '', capacity: '2', amenities: '', available: 'true', tourUrl: ''
   });
   const [photos, setPhotos] = useState(null);
 
@@ -58,7 +58,7 @@ export default function AdminRooms() {
   });
 
   const resetForm = () => {
-    setForm({ name: '', description: '', price: '', capacity: '2', amenities: '', available: 'true' });
+    setForm({ name: '', description: '', price: '', capacity: '2', amenities: '', available: 'true', tourUrl: '' });
     setPhotos(null);
     setShowForm(false);
     setEditing(null);
@@ -73,6 +73,7 @@ export default function AdminRooms() {
     fd.append('capacity', form.capacity);
     fd.append('amenities', JSON.stringify(form.amenities.split(',').map(a => a.trim()).filter(Boolean)));
     fd.append('available', form.available);
+    if (form.tourUrl) fd.append('tourUrl', form.tourUrl);
     if (photos) for (let i = 0; i < photos.length; i++) fd.append('photos', photos[i]);
     saveRoom.mutate(fd);
   };
@@ -85,6 +86,7 @@ export default function AdminRooms() {
       capacity: room.capacity?.toString() || '2',
       amenities: room.amenities?.join(', ') || '',
       available: room.available ? 'true' : 'false',
+      tourUrl: room.tourUrl || '',
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -151,6 +153,12 @@ export default function AdminRooms() {
             <input type="file" multiple accept="image/*" onChange={e => setPhotos(e.target.files)}
               className="w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gold file:text-navy hover:file:bg-gold-light" />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-navy mb-1">Virtual Tour URL <span className="text-muted font-normal">(YouTube, Matterport, or iframe URL)</span></label>
+            <input type="url" value={form.tourUrl || ''} onChange={e => setForm({...form, tourUrl: e.target.value})}
+              placeholder="https://youtube.com/watch?v=... or https://my.matterport.com/show/?m=..."
+              className="w-full px-4 py-3 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy" />
+          </div>
           <button type="submit" disabled={saveRoom.isPending}
             className="w-full bg-navy hover:bg-navy-light disabled:bg-navy/50 text-white font-bold py-4 rounded-xl text-sm uppercase tracking-widest transition-all">
             {saveRoom.isPending ? 'Saving...' : editing ? 'Update Room' : 'Create Room'}
@@ -212,4 +220,4 @@ export default function AdminRooms() {
       </div>
     </div>
   );
-}
+}
