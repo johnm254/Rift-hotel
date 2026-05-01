@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useWishlist } from '../context/WishlistContext';
+import LanguageToggle from './LanguageToggle';
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth();
@@ -37,6 +38,7 @@ export default function Navbar() {
             <NavLink to="/rooms" active={isActive('/rooms')}>Rooms</NavLink>
             <NavLink to="/meals" active={isActive('/meals')}>Dining</NavLink>
             <NavLink to="/order" active={isActive('/order')}>Room Service</NavLink>
+            <NavLink to="/transfer" active={isActive('/transfer')}>Transfer</NavLink>
             <NavLink to="/offers" active={isActive('/offers')}>
               <span className="flex items-center gap-1">
                 Offers
@@ -68,6 +70,9 @@ export default function Navbar() {
                 </svg>
               )}
             </button>
+
+            {/* Language toggle */}
+            <LanguageToggle />
 
             {user ? (
               <>

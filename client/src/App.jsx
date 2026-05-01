@@ -1,6 +1,7 @@
 import { Toaster } from 'sonner';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
+import './i18n/index.js';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { WishlistProvider } from './context/WishlistContext';
@@ -28,12 +29,14 @@ import Offers from './pages/Offers';
 import FAQ from './pages/FAQ';
 import NotFound from './pages/NotFound';
 
+import AirportTransfer from './pages/AirportTransfer';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminRooms from './pages/admin/Rooms';
 import AdminMeals from './pages/admin/Meals';
 import AdminBookings from './pages/admin/Bookings';
 import AdminGuests from './pages/admin/Guests';
 import OccupancyCalendar from './pages/admin/OccupancyCalendar';
+import Housekeeping from './pages/admin/Housekeeping';
 import AdminLayout from './components/AdminLayout';
 
 // Push notification setup
@@ -68,6 +71,7 @@ function AppContent() {
             <Route path="/admin/bookings" element={<ProtectedRoute admin><AdminLayout><AdminBookings /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/guests" element={<ProtectedRoute admin><AdminLayout><AdminGuests /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/calendar" element={<ProtectedRoute admin><AdminLayout><OccupancyCalendar /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/housekeeping" element={<ProtectedRoute admin><AdminLayout><Housekeeping /></AdminLayout></ProtectedRoute>} />
           </Routes>
         </PageWrapper>
       </>
@@ -87,6 +91,7 @@ function AppContent() {
             <Route path="/meals" element={<Meals />} />
             <Route path="/order" element={<MealOrder />} />
             <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/transfer" element={<ProtectedRoute><AirportTransfer /></ProtectedRoute>} />
             <Route path="/offers" element={<Offers />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />

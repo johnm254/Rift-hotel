@@ -4,6 +4,7 @@ const { db } = require('../config/firebase');
 const { authenticate, isAdmin } = require('../middleware/auth');
 const { bookingSchema, paginationSchema, validate } = require('../validators/schemas');
 const { sendBookingConfirmation, sendStatusUpdate } = require('../services/email');
+const { sendBookingSMS, sendBookingApprovedSMS, sendCheckoutSMS } = require('../services/sms');
 
 // GET /api/bookings/export — admin: export all bookings as CSV
 router.get('/export', authenticate, isAdmin, async (req, res) => {
@@ -129,6 +130,8 @@ router.post('/', authenticate, validate(bookingSchema), async (req, res) => {
 
     // Send confirmation email (async, don't block response)
     sendBookingConfirmation(req.user.email, saved).catch(e => console.warn('Email send failed:', e.message));
+    // Send SMS confirmation
+    if (req.user.phone) sendBookingSMS(req.user.phone, saved).catch(() => {});
 
     res.status(201).json(saved);
   } catch (err) {
@@ -177,6 +180,16 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
     // Send status update email (not for check-out)
     if (status !== 'checked-out') {
       sendStatusUpdate(booking.userEmail, booking, status).catch(e => console.warn('Email send failed:', e.message));
+      if (status === 'approved') {
+        // Get user phone for SMS
+        const userDoc = await db.collection('users').doc(booking.userId).get().catch(() => null);
+        const phone = userDoc?.data()?.phone;
+        if (phone) sendBookingApprovedSMS(phone, booking).catch(() => {});
+      }
+    } else {
+      const userDoc = await db.collection('users').doc(booking.userId).get().catch(() => null);
+      const phone = userDoc?.data()?.phone;
+      if (phone) sendCheckoutSMS(phone, booking).catch(() => {});
     }
 
     res.json(booking);
