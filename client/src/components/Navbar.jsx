@@ -43,14 +43,18 @@ export default function Navbar() {
   const isActive = (to, exact) =>
     exact ? location.pathname === to : location.pathname.startsWith(to);
 
-  const isHeroPage = ['/', '/rooms', '/meals', '/offers', '/about', '/contact'].includes(location.pathname);
+  const isHeroPage = ['/', '/rooms', '/meals', '/offers', '/about', '/contact', '/transfer', '/order', '/faq', '/wishlist'].includes(location.pathname);
+  // On non-hero pages or when scrolled, always use solid dark background
+  const solidBg = scrolled || !isHeroPage;
+  // Text should be light on dark bg, dark on light bg (only when transparent on hero)
+  const lightText = solidBg || isHeroPage;
 
   return (
     <>
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
         scrolled || !isHeroPage
-          ? 'bg-navy/80 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-navy/20'
-          : 'bg-transparent'
+          ? 'bg-navy/95 backdrop-blur-xl border-b border-gold/15 shadow-xl shadow-navy/30'
+          : 'bg-gradient-to-b from-navy/70 to-transparent backdrop-blur-sm'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-18">
