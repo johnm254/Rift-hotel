@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
-import Loading from '../components/Loading';
+import { SkeletonGrid } from '../components/SkeletonCard';
 import { mockMeals } from '../lib/mockData';
 
 export default function Meals() {
@@ -93,7 +93,7 @@ export default function Meals() {
 
       {/* Meal Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        {isLoading ? <Loading /> : filtered.length === 0 ? (
+        {isLoading ? <SkeletonGrid count={6} type="meal" /> : filtered.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-muted text-lg">No dishes found. Add meals from the admin panel.</p>
           </div>

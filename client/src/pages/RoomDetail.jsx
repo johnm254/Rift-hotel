@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { useWishlist } from '../context/WishlistContext';
 import Loading from '../components/Loading';
 import { mockRooms, mockReviews } from '../lib/mockData';
 
@@ -109,9 +111,13 @@ function AvailabilityCalendar({ bookedRanges = [] }) {
 export default function RoomDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { toggle: toggleWishlist, isWishlisted } = useWishlist();
   const navigate = useNavigate();
   const [activePhoto, setActivePhoto] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [showReviewForm, setShowReviewForm] = useState(false);
 
   const { data: room, isLoading } = useQuery({
     queryKey: ['room', id],
@@ -145,6 +151,17 @@ export default function RoomDetail() {
       const arr = Array.isArray(d) ? d : (d.rooms || d.data || []);
       return arr.length > 0 ? arr : mockRooms;
     }).catch(() => mockRooms),
+  });
+
+  const submitReview = useMutation({
+    mutationFn: () => api.post('/reviews', { roomId: id, rating: reviewRating, comment: reviewComment }),
+    onSuccess: () => {
+      toast.success('Review submitted! Thank you.');
+      setShowReviewForm(false);
+      setReviewComment('');
+      setReviewRating(5);
+    },
+    onError: (err) => toast.error(err.response?.data?.error || 'Failed to submit review'),
   });
 
   if (isLoading) return <Loading />;
@@ -187,6 +204,15 @@ export default function RoomDetail() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
           </svg>
           View all {photos.length} photos
+        </button>
+
+        {/* Wishlist button */}
+        <button
+          onClick={() => { toggleWishlist(room); toast(isWishlisted(id) ? 'Removed from wishlist' : '❤️ Added to wishlist'); }}
+          className="absolute top-4 left-4 w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-md transition-all">
+          <svg className={`w-5 h-5 transition-colors ${isWishlisted(id) ? 'text-red-500 fill-current' : 'text-gray-400'}`} fill={isWishlisted(id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
         </button>
 
         {photos.length > 1 && (
@@ -304,6 +330,47 @@ export default function RoomDetail() {
                       <p className="text-muted text-sm leading-relaxed">{review.comment}</p>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Leave a review */}
+              {user && (
+                <div className="mt-6">
+                  {!showReviewForm ? (
+                    <button onClick={() => setShowReviewForm(true)}
+                      className="flex items-center gap-2 text-gold hover:text-gold-dark font-medium text-sm transition-colors">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                      </svg>
+                      Leave a Review
+                    </button>
+                  ) : (
+                    <div className="bg-white border border-cream-dark rounded-2xl p-5 shadow-sm">
+                      <h4 className="font-serif font-bold text-navy mb-4">Write a Review</h4>
+                      <div className="mb-4">
+                        <label className="block text-xs font-medium text-muted uppercase tracking-widest mb-2">Your Rating</label>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map(s => (
+                            <button key={s} onClick={() => setReviewRating(s)}
+                              className={`text-3xl transition-transform hover:scale-110 ${s <= reviewRating ? 'text-gold' : 'text-cream-dark'}`}>★</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="mb-4">
+                        <label className="block text-xs font-medium text-muted uppercase tracking-widest mb-2">Your Review</label>
+                        <textarea value={reviewComment} onChange={e => setReviewComment(e.target.value)}
+                          rows={3} placeholder="Share your experience..."
+                          className="w-full px-4 py-3 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors resize-none" />
+                      </div>
+                      <div className="flex gap-3">
+                        <button onClick={() => submitReview.mutate()} disabled={submitReview.isPending || !reviewComment.trim()}
+                          className="bg-gold hover:bg-gold-light disabled:bg-gold/50 text-navy font-bold px-5 py-2.5 rounded-xl text-sm transition-all">
+                          {submitReview.isPending ? 'Submitting...' : 'Submit Review'}
+                        </button>
+                        <button onClick={() => setShowReviewForm(false)} className="text-muted hover:text-navy text-sm px-3 transition-colors">Cancel</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

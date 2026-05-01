@@ -13,6 +13,28 @@
   --color-muted: #6B7280;
 }
 
+/* ── Dark mode overrides ── */
+.dark {
+  --color-cream: #1a1a2e;
+  --color-cream-dark: #16213e;
+  --color-surface: #0f3460;
+  --color-navy: #e2e8f0;
+  --color-navy-light: #cbd5e1;
+  --color-muted: #94a3b8;
+}
+
+.dark body {
+  background-color: #1a1a2e;
+  color: #e2e8f0;
+}
+
+.dark .bg-white { background-color: #16213e !important; }
+.dark .bg-cream { background-color: #1a1a2e !important; }
+.dark .bg-cream-dark { background-color: #0f3460 !important; }
+.dark .border-cream-dark { border-color: #0f3460 !important; }
+.dark .text-navy { color: #e2e8f0 !important; }
+.dark .text-muted { color: #94a3b8 !important; }
+
 @layer base {
   body {
     font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
@@ -52,3 +74,21 @@
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Page transition */
+.page-enter {
+  animation: pageIn 0.3s ease-out;
+}
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Fade in on scroll */
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

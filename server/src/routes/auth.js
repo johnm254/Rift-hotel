@@ -51,8 +51,11 @@ router.get('/me', authenticate, async (req, res) => {
 // PUT /api/auth/me
 router.put('/me', authenticate, async (req, res) => {
   try {
-    const { name } = req.body;
-    if (name) { await auth.updateUser(req.user.uid, { displayName: name }); await db.collection('users').doc(req.user.uid).update({ name }); }
+    const allowed = ['name', 'phone', 'nationality', 'dateOfBirth', 'gender', 'idNumber', 'address', 'city', 'country', 'postalCode', 'emergencyName', 'emergencyPhone', 'emergencyRelation'];
+    const update = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+    if (update.name) await auth.updateUser(req.user.uid, { displayName: update.name });
+    if (Object.keys(update).length) await db.collection('users').doc(req.user.uid).update(update);
     const userDoc = await db.collection('users').doc(req.user.uid).get();
     res.json({ uid: req.user.uid, ...userDoc.data() });
   } catch (err) {

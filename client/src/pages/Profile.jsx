@@ -193,11 +193,15 @@ export default function Profile() {
           <div className="flex-1">
             <h2 className="text-xl font-bold text-navy">{user?.name || 'Guest'}</h2>
             <p className="text-muted text-sm">{user?.email}</p>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${user?.admin || user?.role === 'admin' ? 'bg-gold/20 text-gold-dark' : 'bg-cream text-navy/60'}`}>
                 {user?.admin || user?.role === 'admin' ? '👑 Admin' : '🏨 Guest'}
               </span>
               <span className="text-xs text-muted">{bookings.length} booking{bookings.length !== 1 ? 's' : ''}</span>
+              {/* Loyalty points badge */}
+              <span className="flex items-center gap-1 text-xs font-semibold bg-gold/10 text-gold-dark px-2.5 py-0.5 rounded-full border border-gold/20">
+                ⭐ {user?.loyaltyPoints || 0} pts
+              </span>
             </div>
           </div>
         </div>
@@ -508,6 +512,29 @@ export default function Profile() {
                 </div>
                 <span className="text-xs bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full font-medium">Not enabled</span>
               </div>
+            </div>
+          </div>
+
+          {/* ── Loyalty Points ── */}
+          <div className="bg-white rounded-2xl shadow-lg border border-cream-dark p-6">
+            <h3 className="text-lg font-bold text-navy mb-1">Loyalty Points</h3>
+            <p className="text-xs text-muted mb-5">Earn 1 point for every KES 100 spent. Redeem for discounts.</p>
+            <div className="bg-gradient-to-r from-navy to-navy-light rounded-2xl p-6 text-white mb-4">
+              <div className="text-xs text-cream/60 uppercase tracking-widest mb-1">Your Balance</div>
+              <div className="text-4xl font-bold text-gold">{user?.loyaltyPoints || 0}</div>
+              <div className="text-cream/60 text-sm mt-1">points</div>
+              <div className="mt-4 text-xs text-cream/50">
+                {user?.loyaltyPoints >= 500 ? '🎉 You can redeem for a discount!' : `${500 - (user?.loyaltyPoints || 0)} more points to unlock your first reward`}
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              {[['500 pts', 'KES 500 off', user?.loyaltyPoints >= 500], ['1000 pts', 'KES 1,200 off', user?.loyaltyPoints >= 1000], ['2000 pts', 'Free night', user?.loyaltyPoints >= 2000]].map(([pts, reward, unlocked]) => (
+                <div key={pts} className={`rounded-xl p-3 border-2 ${unlocked ? 'border-gold bg-gold/5' : 'border-cream-dark opacity-50'}`}>
+                  <div className="text-xs font-bold text-gold">{pts}</div>
+                  <div className="text-xs text-navy mt-1">{reward}</div>
+                  {unlocked && <div className="text-xs text-green-600 mt-1 font-medium">✓ Unlocked</div>}
+                </div>
+              ))}
             </div>
           </div>
 

@@ -88,6 +88,7 @@ export default function AdminDashboard() {
           <Link to="/admin/meals" className="bg-navy hover:bg-navy-light text-cream px-4 py-2.5 rounded-xl text-sm font-medium transition-all">Meals</Link>
           <Link to="/admin/bookings" className="bg-navy hover:bg-navy-light text-cream px-4 py-2.5 rounded-xl text-sm font-medium transition-all">Bookings</Link>
           <Link to="/admin/guests" className="bg-gold hover:bg-gold-light text-navy px-4 py-2.5 rounded-xl text-sm font-medium transition-all">Guests</Link>
+          <Link to="/admin/calendar" className="bg-navy hover:bg-navy-light text-cream px-4 py-2.5 rounded-xl text-sm font-medium transition-all">📅 Calendar</Link>
           <button
             onClick={() => { if (window.confirm('Seed mock rooms and meals into Firestore? Existing data will not be overwritten.')) seedData.mutate(); }}
             disabled={seedData.isPending}

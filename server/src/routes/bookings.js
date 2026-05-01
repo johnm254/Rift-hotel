@@ -5,6 +5,49 @@ const { authenticate, isAdmin } = require('../middleware/auth');
 const { bookingSchema, paginationSchema, validate } = require('../validators/schemas');
 const { sendBookingConfirmation, sendStatusUpdate } = require('../services/email');
 
+// GET /api/bookings/export — admin: export all bookings as CSV
+router.get('/export', authenticate, isAdmin, async (req, res) => {
+  try {
+    const snapshot = await db.collection('bookings').orderBy('createdAt', 'desc').get();
+    const bookings = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    const headers = ['ID', 'Guest Name', 'Email', 'Room', 'Check-in', 'Check-out', 'Guests', 'Total (KES)', 'Status', 'Payment', 'Payment Method', 'Booked At'];
+    const rows = bookings.map(b => [
+      b.id, b.userName || '', b.userEmail || '', b.roomName || '',
+      b.checkIn || '', b.checkOut || '', b.guests || '',
+      b.totalPrice || 0, b.status || '', b.paymentStatus || '',
+      b.paymentMethod || '', b.createdAt ? new Date(b.createdAt).toLocaleDateString() : '',
+    ]);
+
+    const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="bookings-${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(csv);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/bookings/validate-promo — guest: validate promo code
+router.post('/validate-promo', authenticate, async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: 'Code required' });
+
+    const snap = await db.collection('promoCodes').where('code', '==', code.toUpperCase()).get();
+    if (snap.empty) return res.status(404).json({ error: 'Invalid promo code' });
+
+    const promo = { id: snap.docs[0].id, ...snap.docs[0].data() };
+    if (promo.expiresAt && new Date(promo.expiresAt) < new Date()) return res.status(400).json({ error: 'Promo code has expired' });
+    if (promo.usageLimit && promo.usageCount >= promo.usageLimit) return res.status(400).json({ error: 'Promo code usage limit reached' });
+
+    res.json({ valid: true, discount: promo.discount, type: promo.type, description: promo.description });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/bookings — admin: paginated list
 router.get('/', authenticate, isAdmin, async (req, res) => {
   try {
@@ -102,7 +145,29 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
     }
 
     const updates = { status, updatedAt: new Date().toISOString(), updatedBy: req.user.email };
-    if (status === 'checked-out') updates.checkedOutAt = new Date().toISOString();
+    if (status === 'checked-out') {
+      updates.checkedOutAt = new Date().toISOString();
+      // Award loyalty points: 1 point per KES 100 spent
+      const bookingDoc = await db.collection('bookings').doc(req.params.id).get();
+      if (bookingDoc.exists) {
+        const totalPrice = bookingDoc.data().totalPrice || 0;
+        const pointsEarned = Math.floor(totalPrice / 100);
+        const userId = bookingDoc.data().userId;
+        if (userId && pointsEarned > 0) {
+          const userDoc = await db.collection('users').doc(userId).get();
+          const currentPoints = userDoc.data()?.loyaltyPoints || 0;
+          await db.collection('users').doc(userId).update({
+            loyaltyPoints: currentPoints + pointsEarned,
+          });
+          // Log transaction
+          await db.collection('loyaltyTransactions').add({
+            userId, bookingId: req.params.id, points: pointsEarned,
+            type: 'earned', description: `Stay at ${bookingDoc.data().roomName}`,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+    }
 
     await db.collection('bookings').doc(req.params.id).update(updates);
 

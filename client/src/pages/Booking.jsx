@@ -24,6 +24,9 @@ export default function Booking() {
   const [step, setStep] = useState(1); // 1=details, 2=payment, 3=confirmed
   const [error, setError] = useState('');
   const [mpesaWaiting, setMpesaWaiting] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState(null);
+  const [promoLoading, setPromoLoading] = useState(false);
 
   const isMock = roomId?.startsWith('room-');
 
@@ -36,7 +39,28 @@ export default function Booking() {
   const nights = checkIn && checkOut
     ? Math.max(0, Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)))
     : 0;
-  const totalPrice = room ? nights * room.price : 0;
+  const basePrice = room ? nights * room.price : 0;
+  const discountAmount = promoDiscount
+    ? promoDiscount.type === 'percent'
+      ? Math.round(basePrice * promoDiscount.discount / 100)
+      : promoDiscount.discount
+    : 0;
+  const totalPrice = Math.max(0, basePrice - discountAmount);
+
+  const applyPromo = async () => {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    try {
+      const res = await api.post('/bookings/validate-promo', { code: promoCode });
+      setPromoDiscount(res.data);
+      setError('');
+    } catch (e) {
+      setPromoDiscount(null);
+      setError(e.response?.data?.error || 'Invalid promo code');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
 
   const createBooking = useMutation({
     mutationFn: (data) => {
@@ -187,12 +211,28 @@ export default function Booking() {
                   <div className="bg-cream rounded-xl p-5 space-y-2">
                     <div className="flex justify-between text-sm text-muted">
                       <span>KES {room.price?.toLocaleString()} × {nights} night{nights > 1 ? 's' : ''}</span>
-                      <span>KES {totalPrice.toLocaleString()}</span>
+                      <span>KES {basePrice.toLocaleString()}</span>
                     </div>
+                    {promoDiscount && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>🎁 Promo: {promoCode.toUpperCase()} ({promoDiscount.type === 'percent' ? `${promoDiscount.discount}% off` : `KES ${promoDiscount.discount} off`})</span>
+                        <span>− KES {discountAmount.toLocaleString()}</span>
+                      </div>
+                    )}
                     <hr className="border-cream-dark" />
                     <div className="flex justify-between font-bold text-navy text-lg">
                       <span>Total</span>
                       <span className="text-gold">KES {totalPrice.toLocaleString()}</span>
+                    </div>
+                    {/* Promo code input */}
+                    <div className="flex gap-2 pt-1">
+                      <input type="text" value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                        placeholder="Promo code"
+                        className="flex-1 px-3 py-2 rounded-xl bg-white border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors" />
+                      <button onClick={applyPromo} disabled={promoLoading || !promoCode.trim()}
+                        className="bg-navy hover:bg-navy-light disabled:bg-navy/40 text-cream font-semibold px-4 py-2 rounded-xl text-sm transition-all">
+                        {promoLoading ? '...' : 'Apply'}
+                      </button>
                     </div>
                   </div>
                 )}

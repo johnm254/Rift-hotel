@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import api from '../lib/api';
-import Loading from '../components/Loading';
+import { SkeletonGrid } from '../components/SkeletonCard';
+import { useWishlist } from '../context/WishlistContext';
 import { mockRooms } from '../lib/mockData';
 
 const CAPACITY_OPTIONS = [
@@ -52,6 +54,7 @@ export default function Rooms() {
 
   const hasFilters = search || minPrice || maxPrice || capacityFilter || sortBy !== 'default';
   const clearFilters = () => { setSearch(''); setMinPrice(''); setMaxPrice(''); setCapacityFilter(0); setSortBy('default'); };
+  const { toggle: toggleWishlist, isWishlisted } = useWishlist();
 
   return (
     <div>
@@ -152,7 +155,7 @@ export default function Rooms() {
 
       {/* Room Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        {isLoading ? <Loading /> : filtered.length === 0 ? (
+        {isLoading ? <SkeletonGrid count={6} type="room" /> : filtered.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl border border-cream-dark">
             <div className="text-4xl mb-3">🔍</div>
             <p className="text-navy font-semibold mb-1">No rooms match your filters</p>
@@ -182,6 +185,14 @@ export default function Rooms() {
                   <div className="absolute top-4 right-4 bg-gold text-navy font-bold px-3 py-1.5 rounded-full text-sm shadow-lg">
                     KES {room.price?.toLocaleString()}<span className="text-xs font-normal">/night</span>
                   </div>
+                  {/* Wishlist heart */}
+                  <button
+                    onClick={e => { e.preventDefault(); toggleWishlist(room); toast(isWishlisted(room.id) ? 'Removed from wishlist' : '❤️ Saved to wishlist'); }}
+                    className="absolute top-4 left-4 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow transition-all z-10">
+                    <svg className={`w-4 h-4 ${isWishlisted(room.id) ? 'text-red-500 fill-current' : 'text-gray-400'}`} fill={isWishlisted(room.id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </button>
                   {!room.available && (
                     <div className="absolute inset-0 bg-navy/60 flex items-center justify-center">
                       <span className="bg-red-500/90 text-white font-bold px-6 py-2 rounded-full text-sm uppercase tracking-widest">Unavailable</span>
