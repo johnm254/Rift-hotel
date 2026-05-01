@@ -1,20 +1,41 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Lazy transporter — only creates if SMTP is configured
+let _transporter = null;
 
-const FROM = `"Azura Haven" <${process.env.SMTP_USER || 'reservations@azurahaven.com'}>`;
+function getTransporter() {
+  if (_transporter) return _transporter;
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn('⚠️  SMTP not configured — emails will be skipped. Set SMTP_USER and SMTP_PASS in .env');
+    return null;
+  }
+  _transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+  return _transporter;
+}
+
+const FROM = () => `"Azura Haven" <${process.env.SMTP_USER || 'reservations@azurahaven.com'}>`;
+
+async function sendMail(options) {
+  const transporter = getTransporter();
+  if (!transporter) return { skipped: true };
+  try {
+    return await transporter.sendMail({ from: FROM(), ...options });
+  } catch (err) {
+    console.warn('⚠️  Email send failed:', err.message);
+    return { error: err.message };
+  }
+}
 
 async function sendBookingConfirmation(to, booking) {
-  await transporter.sendMail({
-    from: FROM,
+  return sendMail({
     to,
     subject: `Booking Confirmed — ${booking.roomName}`,
     html: `
@@ -63,8 +84,7 @@ async function sendStatusUpdate(to, booking, newStatus) {
   const statusEmoji = newStatus === 'approved' ? '✅' : '❌';
   const statusText = newStatus === 'approved' ? 'Approved' : 'Declined';
 
-  await transporter.sendMail({
-    from: FROM,
+  return sendMail({
     to,
     subject: `Booking ${statusText} — ${booking.roomName}`,
     html: `
@@ -87,8 +107,7 @@ async function sendStatusUpdate(to, booking, newStatus) {
 }
 
 async function sendWelcomeEmail(to, name) {
-  await transporter.sendMail({
-    from: FROM,
+  return sendMail({
     to,
     subject: 'Welcome to Azura Haven 🌟',
     html: `
