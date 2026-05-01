@@ -28,24 +28,24 @@
   color: #f1f5f9;
 }
 
-/* Backgrounds */
-.dark .bg-white,
-.dark .bg-surface { background-color: #1e293b !important; }
-
+/* ── Backgrounds ── */
+.dark .bg-white { background-color: #1e293b !important; }
 .dark .bg-cream { background-color: #0f172a !important; }
 .dark .bg-cream-dark { background-color: #1e293b !important; }
 
-/* Borders */
+/* ── Borders ── */
 .dark .border-cream-dark { border-color: #334155 !important; }
 .dark .border-cream { border-color: #1e293b !important; }
 
-/* Text */
+/* ── Text — ensure visibility ── */
 .dark .text-navy { color: #f1f5f9 !important; }
-.dark .text-navy\/70 { color: #cbd5e1 !important; }
-.dark .text-navy\/60 { color: #94a3b8 !important; }
 .dark .text-muted { color: #94a3b8 !important; }
 
-/* Inputs & selects */
+/* Opacity-based text that becomes invisible in dark mode */
+.dark [class*="text-navy/"] { color: #cbd5e1 !important; }
+.dark [class*="text-cream/"] { color: rgba(241,245,249,0.7) !important; }
+
+/* ── Inputs & selects ── */
 .dark input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .dark textarea,
 .dark select {
@@ -53,30 +53,10 @@
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
-
 .dark input::placeholder,
 .dark textarea::placeholder { color: #64748b !important; }
 
-/* Cards & panels */
-.dark .shadow-sm,
-.dark .shadow-md,
-.dark .shadow-lg,
-.dark .shadow-xl { --tw-shadow-color: rgba(0,0,0,0.4); }
-
-/* Specific component overrides */
-.dark .bg-cream\/30 { background-color: rgba(15,23,42,0.3) !important; }
-.dark .bg-cream\/50 { background-color: rgba(15,23,42,0.5) !important; }
-.dark .bg-gold\/10 { background-color: rgba(201,169,110,0.1) !important; }
-.dark .bg-gold\/20 { background-color: rgba(201,169,110,0.2) !important; }
-
-/* Table rows */
-.dark tr:hover { background-color: #1e293b !important; }
-.dark td, .dark th { border-color: #334155 !important; }
-
-/* Scrollbar */
-.dark ::-webkit-scrollbar-track { background: #1e293b; }
-
-/* Badges that use light backgrounds */
+/* ── Light-colored badge backgrounds ── */
 .dark .bg-green-50 { background-color: #052e16 !important; }
 .dark .bg-green-100 { background-color: #14532d !important; }
 .dark .bg-yellow-50 { background-color: #1c1400 !important; }
@@ -90,12 +70,18 @@
 .dark .bg-gray-100 { background-color: #1f2937 !important; }
 .dark .bg-amber-50 { background-color: #1c1000 !important; }
 
-/* Dividers */
+/* ── Dividers ── */
 .dark hr { border-color: #334155 !important; }
-.dark .divide-cream-dark > * + * { border-color: #334155 !important; }
 
-/* Focus rings */
-.dark .focus\:border-gold:focus { border-color: #C9A96E !important; }
+/* ── Table ── */
+.dark tr:hover { background-color: #1e293b !important; }
+
+/* ── Scrollbar ── */
+.dark ::-webkit-scrollbar-track { background: #1e293b; }
+
+/* ── Keep hero/footer always dark (they're already dark) ── */
+.dark .hero-gradient,
+.dark footer { filter: none; }
 
 @layer base {
   body {

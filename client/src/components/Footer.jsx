@@ -2,19 +2,19 @@ import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
-    <footer className="bg-navy-dark border-t border-gold/10 mt-auto">
+    <footer style={{ backgroundColor: '#0f172a', borderTop: '1px solid rgba(201,169,110,0.1)' }} className="mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-2xl">🏨</span>
-              <span className="font-serif text-xl text-gold font-bold">Azura Haven</span>
+              <span className="font-serif text-xl font-bold" style={{ color: '#C9A96E' }}>Azura Haven</span>
             </div>
-            <p className="text-cream/50 text-sm leading-relaxed mb-5 max-w-xs">
+            <p className="text-sm leading-relaxed mb-5 max-w-xs" style={{ color: 'rgba(245,241,235,0.6)' }}>
               Kenya's premier luxury hotel. Where world-class hospitality meets the warmth of home.
             </p>
-            <div className="space-y-2 text-cream/50 text-sm">
+            <div className="space-y-2 text-sm" style={{ color: 'rgba(245,241,235,0.6)' }}>
               <p>📍 Westlands, Nairobi, Kenya</p>
               <p>📞 +254 700 000 000</p>
               <p>✉️ reservations@azurahaven.com</p>
@@ -30,18 +30,19 @@ export default function Footer() {
 
           {/* Explore */}
           <div>
-            <h4 className="text-gold font-semibold mb-4 text-sm uppercase tracking-widest">Explore</h4>
+            <h4 className="font-semibold mb-4 text-sm uppercase tracking-widest" style={{ color: '#C9A96E' }}>Explore</h4>
             <div className="space-y-2.5">
               <FooterLink to="/rooms">Rooms & Suites</FooterLink>
               <FooterLink to="/meals">Dining</FooterLink>
               <FooterLink to="/offers">Special Offers</FooterLink>
               <FooterLink to="/about">About Us</FooterLink>
+              <FooterLink to="/transfer">Airport Transfer</FooterLink>
             </div>
           </div>
 
           {/* Help */}
           <div>
-            <h4 className="text-gold font-semibold mb-4 text-sm uppercase tracking-widest">Help</h4>
+            <h4 className="font-semibold mb-4 text-sm uppercase tracking-widest" style={{ color: '#C9A96E' }}>Help</h4>
             <div className="space-y-2.5">
               <FooterLink to="/faq">FAQ</FooterLink>
               <FooterLink to="/contact">Contact Us</FooterLink>
@@ -52,17 +53,21 @@ export default function Footer() {
 
           {/* Payments & Social */}
           <div>
-            <h4 className="text-gold font-semibold mb-4 text-sm uppercase tracking-widest">Payments</h4>
+            <h4 className="font-semibold mb-4 text-sm uppercase tracking-widest" style={{ color: '#C9A96E' }}>Payments</h4>
             <div className="flex flex-wrap gap-2 mb-6">
               {['M-Pesa', 'Visa', 'Mastercard', 'Cash'].map(p => (
-                <span key={p} className="bg-navy px-3 py-1.5 rounded text-xs text-cream/60 border border-cream/10">{p}</span>
+                <span key={p} className="px-3 py-1.5 rounded text-xs font-medium"
+                  style={{ backgroundColor: '#1B2A4A', color: 'rgba(245,241,235,0.7)', border: '1px solid rgba(245,241,235,0.1)' }}>
+                  {p}
+                </span>
               ))}
             </div>
-            <h4 className="text-gold font-semibold mb-3 text-sm uppercase tracking-widest">Follow Us</h4>
+            <h4 className="font-semibold mb-3 text-sm uppercase tracking-widest" style={{ color: '#C9A96E' }}>Follow Us</h4>
             <div className="flex gap-2">
               {[['📸', 'Instagram', '#'], ['👍', 'Facebook', '#'], ['🐦', 'Twitter', '#']].map(([icon, label, href]) => (
                 <a key={label} href={href} title={label}
-                  className="w-9 h-9 rounded-lg bg-navy hover:bg-navy-light border border-cream/10 flex items-center justify-center text-base transition-all">
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-base transition-all hover:opacity-80"
+                  style={{ backgroundColor: '#1B2A4A', border: '1px solid rgba(245,241,235,0.1)' }}>
                   {icon}
                 </a>
               ))}
@@ -70,11 +75,12 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-cream/10 flex flex-col sm:flex-row justify-between items-center gap-3 text-cream/30 text-xs">
+        <div className="mt-12 pt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs"
+          style={{ borderTop: '1px solid rgba(245,241,235,0.1)', color: 'rgba(245,241,235,0.4)' }}>
           <span>© {new Date().getFullYear()} Azura Haven Hotel & Resort. All rights reserved.</span>
           <div className="flex gap-4">
-            <Link to="/faq" className="hover:text-cream/60 transition-colors">Privacy Policy</Link>
-            <Link to="/faq" className="hover:text-cream/60 transition-colors">Terms of Service</Link>
+            <Link to="/faq" className="hover:opacity-80 transition-opacity">Privacy Policy</Link>
+            <Link to="/faq" className="hover:opacity-80 transition-opacity">Terms of Service</Link>
           </div>
         </div>
       </div>
@@ -84,7 +90,10 @@ export default function Footer() {
 
 function FooterLink({ to, children }) {
   return (
-    <Link to={to} className="block text-cream/50 hover:text-gold text-sm transition-colors">
+    <Link to={to} className="block text-sm transition-colors hover:opacity-100"
+      style={{ color: 'rgba(245,241,235,0.55)' }}
+      onMouseEnter={e => e.target.style.color = '#C9A96E'}
+      onMouseLeave={e => e.target.style.color = 'rgba(245,241,235,0.55)'}>
       {children}
     </Link>
   );
