@@ -37,26 +37,26 @@ export default function Meals() {
   return (
     <div>
       {/* Header */}
-      <section className="hero-gradient py-16">
+      <section className="hero-gradient py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="text-gold text-sm uppercase tracking-widest font-semibold">Dining</span>
-          <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mt-2 mb-4">
+          <span className="text-gold text-xs sm:text-sm uppercase tracking-widest font-semibold">Dining</span>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-white mt-2 mb-3 sm:mb-4">
             Culinary Excellence
           </h1>
-          <p className="text-cream/60 max-w-lg mx-auto">
+          <p className="text-cream/60 max-w-lg mx-auto text-sm sm:text-base">
             From gourmet entrées to indulgent desserts — every dish is crafted with passion.
           </p>
         </div>
       </section>
 
       {/* Filters */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-          {/* Category tabs */}
-          <div className="flex flex-wrap gap-2">
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          {/* Category tabs — scrollable on mobile */}
+          <div className="flex gap-2 overflow-x-auto pb-1 w-full sm:w-auto scrollbar-hide">
             <button
               onClick={() => setCategory('')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 !category ? 'bg-navy text-cream' : 'bg-white text-navy/60 hover:bg-cream border border-cream-dark'
               }`}
             >
@@ -66,7 +66,7 @@ export default function Meals() {
               <button
                 key={c}
                 onClick={() => setCategory(c)}
-                className={`px-4 py-2 rounded-full text-sm font-medium capitalize transition-all ${
+                className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-full text-sm font-medium capitalize transition-all ${
                   category === c ? 'bg-navy text-cream' : 'bg-white text-navy/60 hover:bg-cream border border-cream-dark'
                 }`}
               >
@@ -76,7 +76,7 @@ export default function Meals() {
           </div>
 
           {/* Search */}
-          <div className="relative w-full sm:w-64">
+          <div className="relative w-full sm:w-64 flex-shrink-0">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -92,7 +92,7 @@ export default function Meals() {
       </section>
 
       {/* Meal Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-16 sm:pb-20">
         {isLoading ? <SkeletonGrid count={6} type="meal" /> : filtered.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-muted text-lg">No dishes found. Add meals from the admin panel.</p>

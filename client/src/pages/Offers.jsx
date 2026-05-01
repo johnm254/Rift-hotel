@@ -80,8 +80,8 @@ export default function Offers() {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-10 sm:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8">
           {offers.map(offer => {
             const savings = offer.originalPrice && offer.price ? offer.originalPrice - offer.price : null;
             const badgeColor = offer.badgeColor || 'bg-gold/20 text-gold-dark';

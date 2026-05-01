@@ -39,8 +39,8 @@ export default function About() {
       </section>
 
       {/* Story */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-12 sm:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-16 items-center">
           <div>
             <span className="text-gold text-sm uppercase tracking-widest font-semibold">Est. 2009</span>
             <h2 className="text-3xl md:text-4xl font-serif font-bold text-navy mt-2 mb-6">

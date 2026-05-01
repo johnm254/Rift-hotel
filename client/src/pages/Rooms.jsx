@@ -72,7 +72,7 @@ export default function Rooms() {
       </section>
 
       {/* Filters */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8">
         <div className="bg-white rounded-2xl border border-cream-dark shadow-sm p-5 space-y-4">
           {/* Row 1: search + sort */}
           <div className="flex flex-col sm:flex-row gap-3">
@@ -154,7 +154,7 @@ export default function Rooms() {
       </section>
 
       {/* Room Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-16 sm:pb-20">
         {isLoading ? <SkeletonGrid count={6} type="room" /> : filtered.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl border border-cream-dark">
             <div className="text-4xl mb-3">🔍</div>

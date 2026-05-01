@@ -98,9 +98,9 @@ export default function FAQ() {
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Category filter */}
-        <div className="flex flex-wrap gap-2 mb-10 justify-center">
+      <section className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-10 sm:py-16">
+        {/* Category filter — scrollable on mobile */}
+        <div className="flex gap-2 mb-8 sm:mb-10 overflow-x-auto pb-2 sm:flex-wrap sm:justify-center scrollbar-hide">
           <button
             onClick={() => setActiveCategory(null)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${!activeCategory ? 'bg-navy text-cream' : 'bg-white text-navy/60 hover:bg-cream border border-cream-dark'}`}

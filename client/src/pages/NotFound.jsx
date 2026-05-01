@@ -4,11 +4,11 @@ export default function NotFound() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
-      <div className="text-center max-w-lg">
+    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
+      <div className="text-center max-w-lg w-full">
         {/* Big decorative number */}
-        <div className="relative mb-8">
-          <div className="text-[10rem] font-serif font-bold text-cream-dark leading-none select-none">
+        <div className="relative mb-6 sm:mb-8">
+          <div className="text-[6rem] sm:text-[10rem] font-serif font-bold text-cream-dark leading-none select-none">
             404
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
