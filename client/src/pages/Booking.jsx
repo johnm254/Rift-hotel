@@ -133,43 +133,70 @@ export default function Booking() {
     : 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=600';
 
   return (
-    <div className="min-h-[80vh] bg-cream py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[80vh] bg-cream py-6 sm:py-12">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8">
 
         {/* Progress */}
-        <div className="flex items-center justify-center mb-10">
+        <div className="flex items-center justify-center mb-8">
           {[['Details', 1], ['Payment', 2], ['Confirmed', 3]].map(([label, s]) => (
             <div key={s} className="flex items-center">
               <div className="flex flex-col items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${step >= s ? 'bg-gold text-navy' : 'bg-white text-muted border-2 border-cream-dark'}`}>
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${step >= s ? 'bg-gold text-navy' : 'bg-white text-muted border-2 border-cream-dark'}`}>
                   {step > s ? '✓' : s}
                 </div>
                 <span className={`text-xs mt-1 font-medium ${step >= s ? 'text-navy' : 'text-muted'}`}>{label}</span>
               </div>
-              {s < 3 && <div className={`w-16 h-1 mx-2 mb-4 rounded transition-all ${step > s ? 'bg-gold' : 'bg-cream-dark'}`} />}
+              {s < 3 && <div className={`w-8 sm:w-16 h-1 mx-1 sm:mx-2 mb-4 rounded transition-all ${step > s ? 'bg-gold' : 'bg-cream-dark'}`} />}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8">
+          {/* Room summary — horizontal strip on mobile, sidebar on desktop */}
+          <div className="lg:col-span-1 lg:order-last">
+            <div className="lg:sticky lg:top-24 bg-white rounded-2xl shadow-lg border border-cream-dark overflow-hidden flex lg:flex-col">
+              <div className="w-28 sm:w-36 lg:w-full h-24 sm:h-28 lg:h-40 overflow-hidden flex-shrink-0">
+                <img src={photo} alt={room.name} className="w-full h-full object-cover" />
+              </div>
+              <div className="p-3 sm:p-5 flex-1">
+                <h3 className="font-serif font-bold text-navy text-sm sm:text-base leading-tight">{room.name}</h3>
+                <div className="text-gold font-bold text-sm sm:text-base mt-0.5">KES {room.price?.toLocaleString()} <span className="text-muted text-xs font-normal">/ night</span></div>
+                <div className="text-xs text-muted mt-1 hidden sm:block space-y-0.5">
+                  <div>🛏 Up to {room.capacity} guests</div>
+                  {room.amenities?.slice(0, 2).map(a => <div key={a}>✓ {a}</div>)}
+                </div>
+                {nights > 0 && (
+                  <div className="bg-cream rounded-lg p-2 mt-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted">{nights} night{nights > 1 ? 's' : ''}</span>
+                      <span className="font-bold text-navy">KES {totalPrice.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Main form */}
           <div className="lg:col-span-2">
-            <div className="text-center mb-6">
-              <h1 className="text-3xl font-serif font-bold text-navy">
+            <div className="text-center mb-5">
+              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-navy">
                 {step === 1 ? 'Book Your Stay' : step === 2 ? 'Payment' : 'Booking Confirmed!'}
               </h1>
-              <p className="text-muted mt-1">{room.name}</p>
+              <p className="text-muted mt-1 text-sm">{room.name}</p>
             </div>
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-5">
                 {error}
               </div>
+            )}                {error}
+              </div>
             )}
 
             {/* ── STEP 1 ── */}
             {step === 1 && (
-              <div className="bg-white rounded-2xl shadow-xl border border-cream-dark p-8 space-y-5">
+              <div className="bg-white rounded-2xl shadow-xl border border-cream-dark p-4 sm:p-8 space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-navy mb-1.5">Check-in Date</label>
@@ -246,33 +273,35 @@ export default function Booking() {
 
             {/* ── STEP 2 ── */}
             {step === 2 && (
-              <div className="bg-white rounded-2xl shadow-xl border border-cream-dark p-8 space-y-6">
+              <div className="bg-white rounded-2xl shadow-xl border border-cream-dark p-4 sm:p-8 space-y-5">
                 {/* Amount */}
                 <div className="bg-cream rounded-xl p-4 flex justify-between items-center">
                   <div>
                     <div className="text-xs text-muted uppercase tracking-widest">Total Due</div>
-                    <div className="text-2xl font-bold text-gold">KES {totalPrice.toLocaleString()}</div>
+                    <div className="text-xl sm:text-2xl font-bold text-gold">KES {totalPrice.toLocaleString()}</div>
                   </div>
-                  <div className="text-right text-sm text-muted">
+                  <div className="text-right text-xs sm:text-sm text-muted">
                     <div>{nights} night{nights > 1 ? 's' : ''}</div>
-                    <div>{checkIn} → {checkOut}</div>
+                    <div className="hidden sm:block">{checkIn} → {checkOut}</div>
                   </div>
                 </div>
 
                 {/* Payment method selector */}
                 <div>
                   <label className="block text-sm font-medium text-navy mb-3">Select Payment Method</label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[
                       { id: 'mpesa', icon: '📱', label: 'M-Pesa', sub: 'STK Push' },
                       { id: 'card', icon: '💳', label: 'Card', sub: 'Visa / Mastercard' },
                       { id: 'pay-on-arrival', icon: '🏨', label: 'Pay on Arrival', sub: 'At check-in' },
                     ].map(m => (
                       <button key={m.id} onClick={() => { setPaymentMethod(m.id); setError(''); }}
-                        className={`p-4 rounded-xl border-2 text-center transition-all ${paymentMethod === m.id ? 'border-gold bg-gold/5 shadow-sm' : 'border-cream-dark hover:border-gold/40'}`}>
-                        <div className="text-2xl mb-1">{m.icon}</div>
-                        <div className="text-xs font-bold text-navy">{m.label}</div>
-                        <div className="text-xs text-muted mt-0.5">{m.sub}</div>
+                        className={`p-3 sm:p-4 rounded-xl border-2 flex sm:flex-col items-center sm:text-center gap-3 sm:gap-1 transition-all ${paymentMethod === m.id ? 'border-gold bg-gold/5 shadow-sm' : 'border-cream-dark hover:border-gold/40'}`}>
+                        <div className="text-2xl">{m.icon}</div>
+                        <div>
+                          <div className="text-sm font-bold text-navy">{m.label}</div>
+                          <div className="text-xs text-muted">{m.sub}</div>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -379,13 +408,13 @@ export default function Booking() {
 
             {/* ── STEP 3 ── */}
             {step === 3 && (
-              <div className="bg-white rounded-2xl shadow-xl border border-cream-dark p-8 text-center space-y-6">
-                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-4xl">🎉</div>
+              <div className="bg-white rounded-2xl shadow-xl border border-cream-dark p-5 sm:p-8 text-center space-y-5">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-3xl sm:text-4xl">🎉</div>
                 <div>
-                  <h2 className="text-2xl font-serif font-bold text-navy">Booking Confirmed!</h2>
-                  <p className="text-muted mt-2">A confirmation has been sent to <strong>{user?.email}</strong></p>
+                  <h2 className="text-xl sm:text-2xl font-serif font-bold text-navy">Booking Confirmed!</h2>
+                  <p className="text-muted mt-2 text-sm">Confirmation sent to <strong>{user?.email}</strong></p>
                 </div>
-                <div className="bg-cream rounded-xl p-5 text-left space-y-3">
+                <div className="bg-cream rounded-xl p-4 text-left space-y-3">
                   {[
                     ['Room', room.name],
                     ['Check-in', checkIn],
@@ -395,16 +424,16 @@ export default function Booking() {
                   ].map(([label, val]) => (
                     <div key={label} className="flex justify-between text-sm">
                       <span className="text-muted">{label}</span>
-                      <span className="font-medium text-navy">{val}</span>
+                      <span className="font-medium text-navy text-right ml-4">{val}</span>
                     </div>
                   ))}
                   <hr className="border-cream-dark" />
-                  <div className="flex justify-between font-bold text-navy text-lg">
+                  <div className="flex justify-between font-bold text-navy">
                     <span>Total</span>
                     <span className="text-gold">KES {totalPrice.toLocaleString()}</span>
                   </div>
                 </div>
-                <div className="flex gap-3 justify-center">
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <button onClick={() => navigate('/profile')}
                     className="bg-navy hover:bg-navy-light text-white font-semibold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all">
                     My Bookings
@@ -416,31 +445,6 @@ export default function Booking() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Room summary sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 bg-white rounded-2xl shadow-lg border border-cream-dark overflow-hidden">
-              <div className="h-40 overflow-hidden">
-                <img src={photo} alt={room.name} className="w-full h-full object-cover" />
-              </div>
-              <div className="p-5 space-y-3">
-                <h3 className="font-serif font-bold text-navy">{room.name}</h3>
-                <div className="text-gold font-bold text-lg">KES {room.price?.toLocaleString()} <span className="text-muted text-sm font-normal">/ night</span></div>
-                <div className="text-sm text-muted space-y-1">
-                  <div>🛏 Up to {room.capacity} guests</div>
-                  {room.amenities?.slice(0, 3).map(a => <div key={a}>✓ {a}</div>)}
-                </div>
-                {nights > 0 && (
-                  <div className="bg-cream rounded-xl p-3 mt-2">
-                    <div className="flex justify-between text-sm text-muted">
-                      <span>{nights} night{nights > 1 ? 's' : ''}</span>
-                      <span className="font-bold text-navy">KES {totalPrice.toLocaleString()}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </div>

@@ -168,7 +168,7 @@ export default function Profile() {
   const pastBookings = bookings.filter(b => ['checked-out', 'rejected'].includes(b.status));
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
@@ -208,12 +208,12 @@ export default function Profile() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-cream rounded-xl p-1 mb-6 w-fit">
-        {[['bookings', '📅 My Bookings'], ['settings', '⚙️ Settings']].map(([key, label]) => (
+      <div className="flex gap-1 bg-cream rounded-xl p-1 mb-6 overflow-x-auto">
+        {[['bookings', '📅 Bookings'], ['settings', '⚙️ Settings']].map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${tab === key ? 'bg-white text-navy shadow-sm' : 'text-muted hover:text-navy'}`}
+            className={`flex-shrink-0 px-4 sm:px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${tab === key ? 'bg-white text-navy shadow-sm' : 'text-muted hover:text-navy'}`}
           >
             {label}
           </button>
@@ -401,7 +401,7 @@ export default function Profile() {
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <Field label="Contact Name" value={emergencyForm.emergencyName} editing={emergencyEditing}
                 onChange={v => setEmergencyForm(f => ({ ...f, emergencyName: v }))} placeholder="Jane Doe" />
               <Field label="Phone Number" value={emergencyForm.emergencyPhone} editing={emergencyEditing}

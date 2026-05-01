@@ -188,7 +188,7 @@ export default function RoomDetail() {
       )}
 
       {/* Photo Gallery */}
-      <section className="relative h-[50vh] md:h-[60vh] bg-navy">
+      <section className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] bg-navy">
         <img
           src={photos[activePhoto]}
           alt={room.name}
@@ -230,9 +230,9 @@ export default function RoomDetail() {
           </>
         )}
 
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 pointer-events-none">
+        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-10 pointer-events-none">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl md:text-5xl font-serif font-bold text-white mb-2">{room.name}</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-serif font-bold text-white mb-2">{room.name}</h1>
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-gold font-bold text-2xl">KES {room.price?.toLocaleString()}</span>
               <span className="text-cream/50">/ night</span>
@@ -251,8 +251,8 @@ export default function RoomDetail() {
       </section>
 
       {/* Content */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
           {/* Main */}
           <div className="lg:col-span-2 space-y-10">
             <div>

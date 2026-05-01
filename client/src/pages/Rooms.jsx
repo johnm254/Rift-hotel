@@ -101,34 +101,34 @@ export default function Rooms() {
           </div>
 
           {/* Row 2: price range + capacity */}
-          <div className="flex flex-col sm:flex-row gap-3 items-center">
-            <div className="flex items-center gap-2 flex-1">
-              <span className="text-sm text-muted whitespace-nowrap">Price (KES):</span>
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="flex items-center gap-2 w-full sm:flex-1">
+              <span className="text-sm text-muted whitespace-nowrap">KES:</span>
               <input
                 type="number"
                 placeholder="Min"
                 value={minPrice}
                 onChange={e => setMinPrice(e.target.value)}
-                className="w-28 px-3 py-2 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors"
+                className="w-full sm:w-24 px-3 py-2 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors"
               />
-              <span className="text-muted">—</span>
+              <span className="text-muted flex-shrink-0">—</span>
               <input
                 type="number"
                 placeholder="Max"
                 value={maxPrice}
                 onChange={e => setMaxPrice(e.target.value)}
-                className="w-28 px-3 py-2 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors"
+                className="w-full sm:w-24 px-3 py-2 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors"
               />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-muted whitespace-nowrap">Guests:</span>
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap">
                 {CAPACITY_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
                     onClick={() => setCapacityFilter(opt.value)}
-                    className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${capacityFilter === opt.value ? 'bg-navy text-cream' : 'bg-cream text-navy/60 hover:bg-cream-dark border border-cream-dark'}`}
+                    className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${capacityFilter === opt.value ? 'bg-navy text-cream' : 'bg-cream text-navy/60 hover:bg-cream-dark border border-cream-dark'}`}
                   >
                     {opt.label}
                   </button>
@@ -138,7 +138,7 @@ export default function Rooms() {
 
             {hasFilters && (
               <button onClick={clearFilters} className="text-sm text-gold hover:text-gold-dark font-medium transition-colors whitespace-nowrap">
-                Clear filters ✕
+                Clear ✕
               </button>
             )}
           </div>

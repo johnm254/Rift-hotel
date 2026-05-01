@@ -63,49 +63,52 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-t from-navy/60 via-transparent to-transparent"></div>
         </div>
 
-        <div className="relative flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 flex items-center">
+        <div className="relative flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 md:py-28 flex items-center">
           <div className="w-full max-w-3xl">
-            <span className="inline-block bg-gold/20 backdrop-blur text-gold border border-gold/30 px-4 py-1.5 rounded-full text-sm font-medium mb-6 tracking-wide uppercase">
+            <span className="inline-block bg-gold/20 backdrop-blur text-gold border border-gold/30 px-3 py-1 rounded-full text-xs sm:text-sm font-medium mb-4 sm:mb-6 tracking-wide uppercase">
               {t('welcomeToParadise')}
             </span>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold mb-6 leading-tight">
-              {t('experienceLuxury').split('Luxury')[0]}<span className="text-gold">Luxury</span><br/>{t('experienceLuxury').split('Luxury')[1] || 'Like Never Before'}
+            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-bold mb-4 sm:mb-6 leading-tight">
+              Experience <span className="text-gold">Luxury</span><br className="hidden sm:block"/>
+              <span className="sm:hidden"> </span>Like Never Before
             </h1>
-            <p className="text-lg text-cream/80 mb-8 leading-relaxed max-w-lg">
+            <p className="text-base sm:text-lg text-cream/80 mb-6 sm:mb-8 leading-relaxed max-w-lg">
               {t('heroSubtitle')}
             </p>
 
             {/* ── Date Search Widget ── */}
-            <form onSubmit={handleSearch} className="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-3 flex flex-col sm:flex-row gap-2 max-w-2xl">
-              <div className="flex-1 bg-white/10 hover:bg-white/15 rounded-xl px-4 py-3 transition-colors">
-                <label className="block text-gold text-xs font-semibold uppercase tracking-widest mb-1">Check-in</label>
-                <input type="date" value={checkIn} onChange={e => setCheckIn(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full bg-transparent text-white text-sm focus:outline-none placeholder-cream/40 [color-scheme:dark]" />
+            <form onSubmit={handleSearch} className="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-2 sm:p-3 flex flex-col sm:flex-row gap-2 max-w-2xl">
+              <div className="flex sm:flex-1 gap-2">
+                <div className="flex-1 bg-white/10 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3">
+                  <label className="block text-gold text-xs font-semibold uppercase tracking-widest mb-1">Check-in</label>
+                  <input type="date" value={checkIn} onChange={e => setCheckIn(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full bg-transparent text-white text-sm focus:outline-none [color-scheme:dark]" />
+                </div>
+                <div className="flex-1 bg-white/10 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3">
+                  <label className="block text-gold text-xs font-semibold uppercase tracking-widest mb-1">Check-out</label>
+                  <input type="date" value={checkOut} onChange={e => setCheckOut(e.target.value)}
+                    min={checkIn || new Date().toISOString().split('T')[0]}
+                    className="w-full bg-transparent text-white text-sm focus:outline-none [color-scheme:dark]" />
+                </div>
               </div>
-              <div className="w-px bg-white/20 hidden sm:block self-stretch my-1" />
-              <div className="flex-1 bg-white/10 hover:bg-white/15 rounded-xl px-4 py-3 transition-colors">
-                <label className="block text-gold text-xs font-semibold uppercase tracking-widest mb-1">Check-out</label>
-                <input type="date" value={checkOut} onChange={e => setCheckOut(e.target.value)}
-                  min={checkIn || new Date().toISOString().split('T')[0]}
-                  className="w-full bg-transparent text-white text-sm focus:outline-none [color-scheme:dark]" />
+              <div className="flex gap-2">
+                <div className="bg-white/10 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 flex-1 sm:flex-none sm:min-w-[100px]">
+                  <label className="block text-gold text-xs font-semibold uppercase tracking-widest mb-1">Guests</label>
+                  <select value={guests} onChange={e => setGuests(e.target.value)}
+                    className="w-full bg-transparent text-white text-sm focus:outline-none [color-scheme:dark]">
+                    {[1,2,3,4,5,6].map(n => <option key={n} value={n} className="text-navy bg-white">{n} guest{n > 1 ? 's' : ''}</option>)}
+                  </select>
+                </div>
+                <button type="submit"
+                  className="bg-gold hover:bg-gold-light text-navy font-bold px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg shadow-gold/30 whitespace-nowrap flex-shrink-0">
+                  Search
+                </button>
               </div>
-              <div className="w-px bg-white/20 hidden sm:block self-stretch my-1" />
-              <div className="bg-white/10 hover:bg-white/15 rounded-xl px-4 py-3 transition-colors min-w-[100px]">
-                <label className="block text-gold text-xs font-semibold uppercase tracking-widest mb-1">Guests</label>
-                <select value={guests} onChange={e => setGuests(e.target.value)}
-                  className="w-full bg-transparent text-white text-sm focus:outline-none [color-scheme:dark]">
-                  {[1,2,3,4,5,6].map(n => <option key={n} value={n} className="text-navy bg-white">{n} guest{n > 1 ? 's' : ''}</option>)}
-                </select>
-              </div>
-              <button type="submit"
-                className="bg-gold hover:bg-gold-light text-navy font-bold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg shadow-gold/30 whitespace-nowrap">
-                {t('bookYourStay')}
-              </button>
             </form>
 
-            <div className="flex flex-wrap gap-4 mt-5">
-              <Link to="/offers" className="text-cream/70 hover:text-gold text-sm font-medium transition-colors flex items-center gap-1.5">
+            <div className="flex flex-wrap gap-3 sm:gap-4 mt-4 sm:mt-5">
+              <Link to="/offers" className="text-cream/70 hover:text-gold text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5">
                 🎁 View special offers →
               </Link>
               <Link to="/about" className="text-cream/70 hover:text-gold text-sm font-medium transition-colors flex items-center gap-1.5">
@@ -117,7 +120,7 @@ export default function Home() {
 
         {/* Stats bar */}
         <div className="relative bg-navy/80 backdrop-blur border-t border-gold/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-center">
             <Stat label="Rooms & Suites" value={rooms?.length || '—'} />
             <Stat label="Dining Options" value={meals?.length || '—'} />
             <Stat label="Guest Rating" value="4.9 ★" />
