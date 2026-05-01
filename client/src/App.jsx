@@ -1,7 +1,6 @@
 import { Toaster } from 'sonner';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-import './i18n/index.js';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { WishlistProvider } from './context/WishlistContext';

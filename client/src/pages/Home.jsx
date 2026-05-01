@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
 import Loading from '../components/Loading';
 import { mockRooms, mockMeals } from '../lib/mockData';
@@ -15,6 +16,7 @@ const testimonials = [
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState('2');
@@ -64,14 +66,13 @@ export default function Home() {
         <div className="relative flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 flex items-center">
           <div className="w-full max-w-3xl">
             <span className="inline-block bg-gold/20 backdrop-blur text-gold border border-gold/30 px-4 py-1.5 rounded-full text-sm font-medium mb-6 tracking-wide uppercase">
-              Welcome to Paradise
+              {t('welcomeToParadise')}
             </span>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold mb-6 leading-tight">
-              Experience <span className="text-gold">Luxury</span><br/>Like Never Before
+              {t('experienceLuxury').split('Luxury')[0]}<span className="text-gold">Luxury</span><br/>{t('experienceLuxury').split('Luxury')[1] || 'Like Never Before'}
             </h1>
             <p className="text-lg text-cream/80 mb-8 leading-relaxed max-w-lg">
-              Nestled in the heart of Kenya, Azura Haven offers world-class hospitality,
-              exquisite dining, and unforgettable experiences.
+              {t('heroSubtitle')}
             </p>
 
             {/* ── Date Search Widget ── */}
@@ -99,7 +100,7 @@ export default function Home() {
               </div>
               <button type="submit"
                 className="bg-gold hover:bg-gold-light text-navy font-bold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg shadow-gold/30 whitespace-nowrap">
-                Search
+                {t('bookYourStay')}
               </button>
             </form>
 
