@@ -37,6 +37,7 @@ import AdminBookings from './pages/admin/Bookings';
 import AdminGuests from './pages/admin/Guests';
 import OccupancyCalendar from './pages/admin/OccupancyCalendar';
 import Housekeeping from './pages/admin/Housekeeping';
+import AdminPackages from './pages/admin/Packages';
 import AdminLayout from './components/AdminLayout';
 
 // Push notification setup
@@ -72,6 +73,7 @@ function AppContent() {
             <Route path="/admin/guests" element={<ProtectedRoute admin><AdminLayout><AdminGuests /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/calendar" element={<ProtectedRoute admin><AdminLayout><OccupancyCalendar /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/housekeeping" element={<ProtectedRoute admin><AdminLayout><Housekeeping /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/packages" element={<ProtectedRoute admin><AdminLayout><AdminPackages /></AdminLayout></ProtectedRoute>} />
           </Routes>
         </PageWrapper>
       </>
