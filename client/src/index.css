@@ -15,25 +15,87 @@
 
 /* ── Dark mode overrides ── */
 .dark {
-  --color-cream: #1a1a2e;
-  --color-cream-dark: #16213e;
-  --color-surface: #0f3460;
-  --color-navy: #e2e8f0;
-  --color-navy-light: #cbd5e1;
+  --color-cream: #0f172a;
+  --color-cream-dark: #1e293b;
+  --color-surface: #1e293b;
+  --color-navy: #f1f5f9;
+  --color-navy-light: #e2e8f0;
   --color-muted: #94a3b8;
 }
 
 .dark body {
-  background-color: #1a1a2e;
-  color: #e2e8f0;
+  background-color: #0f172a;
+  color: #f1f5f9;
 }
 
-.dark .bg-white { background-color: #16213e !important; }
-.dark .bg-cream { background-color: #1a1a2e !important; }
-.dark .bg-cream-dark { background-color: #0f3460 !important; }
-.dark .border-cream-dark { border-color: #0f3460 !important; }
-.dark .text-navy { color: #e2e8f0 !important; }
+/* Backgrounds */
+.dark .bg-white,
+.dark .bg-surface { background-color: #1e293b !important; }
+
+.dark .bg-cream { background-color: #0f172a !important; }
+.dark .bg-cream-dark { background-color: #1e293b !important; }
+
+/* Borders */
+.dark .border-cream-dark { border-color: #334155 !important; }
+.dark .border-cream { border-color: #1e293b !important; }
+
+/* Text */
+.dark .text-navy { color: #f1f5f9 !important; }
+.dark .text-navy\/70 { color: #cbd5e1 !important; }
+.dark .text-navy\/60 { color: #94a3b8 !important; }
 .dark .text-muted { color: #94a3b8 !important; }
+
+/* Inputs & selects */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.dark textarea,
+.dark select {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder { color: #64748b !important; }
+
+/* Cards & panels */
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl { --tw-shadow-color: rgba(0,0,0,0.4); }
+
+/* Specific component overrides */
+.dark .bg-cream\/30 { background-color: rgba(15,23,42,0.3) !important; }
+.dark .bg-cream\/50 { background-color: rgba(15,23,42,0.5) !important; }
+.dark .bg-gold\/10 { background-color: rgba(201,169,110,0.1) !important; }
+.dark .bg-gold\/20 { background-color: rgba(201,169,110,0.2) !important; }
+
+/* Table rows */
+.dark tr:hover { background-color: #1e293b !important; }
+.dark td, .dark th { border-color: #334155 !important; }
+
+/* Scrollbar */
+.dark ::-webkit-scrollbar-track { background: #1e293b; }
+
+/* Badges that use light backgrounds */
+.dark .bg-green-50 { background-color: #052e16 !important; }
+.dark .bg-green-100 { background-color: #14532d !important; }
+.dark .bg-yellow-50 { background-color: #1c1400 !important; }
+.dark .bg-yellow-100 { background-color: #422006 !important; }
+.dark .bg-red-50 { background-color: #1c0a0a !important; }
+.dark .bg-red-100 { background-color: #450a0a !important; }
+.dark .bg-blue-50 { background-color: #0c1a2e !important; }
+.dark .bg-blue-100 { background-color: #172554 !important; }
+.dark .bg-purple-50 { background-color: #1a0a2e !important; }
+.dark .bg-gray-50 { background-color: #111827 !important; }
+.dark .bg-gray-100 { background-color: #1f2937 !important; }
+.dark .bg-amber-50 { background-color: #1c1000 !important; }
+
+/* Dividers */
+.dark hr { border-color: #334155 !important; }
+.dark .divide-cream-dark > * + * { border-color: #334155 !important; }
+
+/* Focus rings */
+.dark .focus\:border-gold:focus { border-color: #C9A96E !important; }
 
 @layer base {
   body {

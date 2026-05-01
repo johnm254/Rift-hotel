@@ -34,6 +34,7 @@ import AdminMeals from './pages/admin/Meals';
 import AdminBookings from './pages/admin/Bookings';
 import AdminGuests from './pages/admin/Guests';
 import OccupancyCalendar from './pages/admin/OccupancyCalendar';
+import AdminLayout from './components/AdminLayout';
 
 // Push notification setup
 function usePushNotifications(user, isAdmin) {
@@ -48,9 +49,30 @@ function usePushNotifications(user, isAdmin) {
 
 function AppContent() {
   const { loading, user, isAdmin } = useAuth();
+  const location = useLocation();
   usePushNotifications(user, isAdmin);
 
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   if (loading) return <Loading full />;
+
+  if (isAdminRoute) {
+    return (
+      <>
+        <Toaster position="top-right" richColors closeButton />
+        <PageWrapper>
+          <Routes>
+            <Route path="/admin" element={<ProtectedRoute admin><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/rooms" element={<ProtectedRoute admin><AdminLayout><AdminRooms /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/meals" element={<ProtectedRoute admin><AdminLayout><AdminMeals /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/bookings" element={<ProtectedRoute admin><AdminLayout><AdminBookings /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/guests" element={<ProtectedRoute admin><AdminLayout><AdminGuests /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/calendar" element={<ProtectedRoute admin><AdminLayout><OccupancyCalendar /></AdminLayout></ProtectedRoute>} />
+          </Routes>
+        </PageWrapper>
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-cream">
@@ -73,12 +95,6 @@ function AppContent() {
             <Route path="/register" element={<Register />} />
             <Route path="/booking/:roomId" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute admin><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/admin/rooms" element={<ProtectedRoute admin><AdminRooms /></ProtectedRoute>} />
-            <Route path="/admin/meals" element={<ProtectedRoute admin><AdminMeals /></ProtectedRoute>} />
-            <Route path="/admin/bookings" element={<ProtectedRoute admin><AdminBookings /></ProtectedRoute>} />
-            <Route path="/admin/guests" element={<ProtectedRoute admin><AdminGuests /></ProtectedRoute>} />
-            <Route path="/admin/calendar" element={<ProtectedRoute admin><OccupancyCalendar /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </PageWrapper>
