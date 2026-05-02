@@ -67,11 +67,12 @@ async function sendApprovalWhatsApp(phone, booking) {
 
 async function sendPaymentReceiptWhatsApp(phone, amount, method, bookingId) {
   if (!phone) return;
-  const msg = `💰 *Azura Haven — Payment Received*\n\n` +
-    `Amount: *KES ${amount?.toLocaleString()}*\n` +
-    `Method: *${method}*\n` +
-    `Ref: ${bookingId?.slice(0, 8).toUpperCase() || 'N/A'}\n\n` +
-    `Thank you for your payment!`;
+  const msg = `✅ *Azura Haven — Payment Confirmed!*\n\n` +
+    `💰 Amount: *KES ${amount?.toLocaleString()}*\n` +
+    `💳 Method: *${method}*\n` +
+    `📋 Ref: *${bookingId?.slice(0, 8).toUpperCase() || 'N/A'}*\n\n` +
+    `Your booking is confirmed. We look forward to welcoming you! 🏨\n\n` +
+    `Questions? Call us: +254 700 000 000`;
   return sendWhatsApp(phone, msg);
 }
 

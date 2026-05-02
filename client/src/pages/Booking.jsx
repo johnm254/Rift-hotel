@@ -135,7 +135,7 @@ export default function Booking() {
         }
 
         // 3. Create booking after confirmed payment
-        const bookingData = { roomId, roomName: room.name, checkIn, checkOut, guests, totalPrice, specialRequests, paymentMethod: 'mpesa', paymentStatus: 'paid' };
+        const bookingData = { roomId, roomName: room.name, checkIn, checkOut, guests, totalPrice, specialRequests, paymentMethod: 'mpesa', paymentStatus: 'paid', mpesaPhone: phone };
         await createBooking.mutateAsync(bookingData);
       } catch (e) {
         setError(e.response?.data?.error || 'M-Pesa payment failed. Please try again.');

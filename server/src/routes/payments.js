@@ -111,11 +111,26 @@ router.post('/mpesa/callback', async (req, res) => {
           paidAt: new Date().toISOString(),
         });
 
-        // Send WhatsApp receipt
-        const userDoc = await db.collection('users').doc(paymentData.userId).get().catch(() => null);
-        const phone = userDoc?.data()?.phone;
-        if (phone) {
-          sendPaymentReceiptWhatsApp(phone, paymentData.amount, 'M-Pesa', paymentData.bookingId).catch(() => {});
+        // Send WhatsApp receipt to the CLIENT using their M-Pesa phone number
+        const clientPhone = paymentData.phone; // phone used for M-Pesa
+        if (clientPhone) {
+          sendPaymentReceiptWhatsApp(clientPhone, paymentData.amount, 'M-Pesa', paymentData.bookingId).catch(() => {});
+        }
+
+        // Also notify hotel owner
+        const ownerPhone = process.env.HOTEL_OWNER_PHONE || '0769113931';
+        const bookingDoc = await db.collection('bookings').doc(paymentData.bookingId).get().catch(() => null);
+        const bookingInfo = bookingDoc?.data();
+        if (ownerPhone && bookingInfo) {
+          const { sendWhatsApp } = require('../services/whatsapp');
+          sendWhatsApp(ownerPhone,
+            `💰 *New M-Pesa Payment Received!*\n\n` +
+            `Guest: *${bookingInfo.userName || 'Guest'}*\n` +
+            `Room: *${bookingInfo.roomName}*\n` +
+            `Check-in: *${bookingInfo.checkIn}*\n` +
+            `Amount: *KES ${paymentData.amount?.toLocaleString()}*\n` +
+            `Receipt: ${callback.CallbackMetadata?.Item?.find(i => i.Name === 'MpesaReceiptNumber')?.Value || 'N/A'}`
+          ).catch(() => {});
         }
       }
     }
