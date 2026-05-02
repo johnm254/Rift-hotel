@@ -3,6 +3,14 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+// Debug: log which critical env vars are present on startup
+console.log('🔍 Env check:', {
+  firebase: !!process.env.FIREBASE_PROJECT_ID,
+  mpesa: !!process.env.MPESA_CONSUMER_KEY,
+  port: process.env.PORT || 5000,
+  node_env: process.env.NODE_ENV || 'development',
+});
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
