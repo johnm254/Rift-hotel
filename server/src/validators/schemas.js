@@ -5,8 +5,13 @@ const roomSchema = z.object({
   description: z.string().max(2000).optional(),
   price: z.coerce.number().positive('Price must be positive'),
   capacity: z.coerce.number().int().min(1).max(10),
-  amenities: z.array(z.string()).optional(),
-  available: z.enum(['true', 'false']).optional(),
+  // amenities can come as JSON string or array from multipart form
+  amenities: z.union([
+    z.array(z.string()),
+    z.string().transform(s => { try { return JSON.parse(s); } catch { return s.split(',').map(a => a.trim()).filter(Boolean); } }),
+  ]).optional(),
+  available: z.union([z.boolean(), z.enum(['true', 'false'])]).optional(),
+  tourUrl: z.string().url().optional().or(z.literal('')),
 });
 
 const mealSchema = z.object({
@@ -14,8 +19,11 @@ const mealSchema = z.object({
   description: z.string().max(1000).optional(),
   price: z.coerce.number().positive('Price must be positive'),
   category: z.string().max(50).optional(),
-  dietary: z.array(z.string()).optional(),
-  available: z.enum(['true', 'false']).optional(),
+  dietary: z.union([
+    z.array(z.string()),
+    z.string().transform(s => { try { return JSON.parse(s); } catch { return s.split(',').map(a => a.trim()).filter(Boolean); } }),
+  ]).optional(),
+  available: z.union([z.boolean(), z.enum(['true', 'false'])]).optional(),
 });
 
 const bookingSchema = z.object({
@@ -38,7 +46,7 @@ const registerSchema = z.object({
 });
 
 const mpesaSchema = z.object({
-  phone: z.string().regex(/^(0?7\d{8}|\+?2547\d{8}|2547\d{8})$/, 'Invalid Kenyan phone number'),
+  phone: z.string().regex(/^(\+?254|0)[17]\d{8}$/, 'Invalid Kenyan phone number'),
   amount: z.coerce.number().positive().min(1),
   bookingId: z.string().optional(),
 });
