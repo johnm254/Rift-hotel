@@ -27,9 +27,11 @@ async function sendMail(options) {
   const transporter = getTransporter();
   if (!transporter) return { skipped: true };
   try {
-    return await transporter.sendMail({ from: FROM(), ...options });
+    const result = await transporter.sendMail({ from: FROM(), ...options });
+    console.log('📧 Email sent to:', options.to, '| ID:', result.messageId);
+    return result;
   } catch (err) {
-    console.warn('⚠️  Email send failed:', err.message);
+    console.error('❌ Email send failed to:', options.to, '| Error:', err.message);
     return { error: err.message };
   }
 }

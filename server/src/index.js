@@ -58,6 +58,26 @@ app.get('/api/health', (req, res) => {
   res.json(checks);
 });
 
+// Test email endpoint — admin only in production
+app.get('/api/test-email', async (req, res) => {
+  try {
+    const { sendMail } = require('./services/email');
+    const to = req.query.to || process.env.SMTP_USER;
+    const result = await sendMail({
+      to,
+      subject: '✅ Azura Haven — Email Test',
+      html: `<div style="font-family:Georgia,serif;max-width:500px;margin:0 auto;padding:20px">
+        <h2 style="color:#C9A96E">🏨 Azura Haven</h2>
+        <p>Email is working correctly on the server.</p>
+        <p style="color:#666;font-size:12px">Sent at: ${new Date().toISOString()}</p>
+      </div>`
+    });
+    res.json({ success: !result.error, result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🏨 Azura Haven API running on port ${PORT}`);
 });
