@@ -25,6 +25,7 @@ export default function Booking() {
   const [step, setStep] = useState(1); // 1=details, 2=payment, 3=confirmed
   const [error, setError] = useState('');
   const [mpesaWaiting, setMpesaWaiting] = useState(false);
+  const [mpesaStatus, setMpesaStatus] = useState(''); // 'sending' | 'waiting' | 'verifying' | 'confirmed'
   const [promoCode, setPromoCode] = useState('');
   const [promoDiscount, setPromoDiscount] = useState(null);
   const [promoLoading, setPromoLoading] = useState(false);
@@ -99,46 +100,57 @@ export default function Booking() {
       if (!/^(07|01|\+2547|\+2541)\d{8}$/.test(phone)) return setError('Enter a valid Kenyan phone number (e.g. 0712 345 678).');
 
       setMpesaWaiting(true);
+      setMpesaStatus('sending');
       try {
         // 1. Send STK push
         let checkoutRequestId = null;
         if (!isMock) {
           const stkRes = await api.post('/payments/mpesa/stk-push', { phone, amount: totalPrice });
           checkoutRequestId = stkRes.data.checkoutRequestId;
+          setMpesaStatus('waiting'); // STK sent, waiting for PIN
         }
 
         // 2. Poll for payment status (max 60 seconds, every 5 seconds)
-        let paid = isMock; // mock rooms skip polling
+        let paid = isMock;
         if (!isMock && checkoutRequestId) {
           for (let i = 0; i < 12; i++) {
             await new Promise(res => setTimeout(res, 5000));
+            if (i === 6) setMpesaStatus('verifying'); // halfway — show verifying
             try {
               const queryRes = await api.post('/payments/mpesa/query', { checkoutRequestId });
               const resultCode = queryRes.data?.ResultCode;
-              if (resultCode === 0 || resultCode === '0') { paid = true; break; }
+              if (resultCode === 0 || resultCode === '0') {
+                paid = true;
+                setMpesaStatus('confirmed');
+                break;
+              }
               if (resultCode !== undefined && resultCode !== null && resultCode !== '1032') {
-                // 1032 = request cancelled by user, other codes = definitive failure
                 setError('M-Pesa payment was not completed. Please try again.');
                 setMpesaWaiting(false);
+                setMpesaStatus('');
                 return;
               }
             } catch {
               // Query failed — continue polling
             }
           }
+        } else if (isMock) {
+          setMpesaStatus('confirmed');
         }
 
         if (!paid) {
           setError('Payment timed out. Please try again or choose another payment method.');
           setMpesaWaiting(false);
+          setMpesaStatus('');
           return;
         }
 
-        // 3. Create booking after confirmed payment
+        // 3. Create booking ONLY after payment confirmed
         const bookingData = { roomId, roomName: room.name, checkIn, checkOut, guests, totalPrice, specialRequests, paymentMethod: 'mpesa', paymentStatus: 'paid', mpesaPhone: phone };
         await createBooking.mutateAsync(bookingData);
       } catch (e) {
         setError(e.response?.data?.error || 'M-Pesa payment failed. Please try again.');
+        setMpesaStatus('');
       } finally {
         setMpesaWaiting(false);
       }
@@ -411,16 +423,32 @@ export default function Booking() {
                       <p className="text-xs text-muted mt-1">Accepts 07XX, 01XX, or +254 format</p>
                     </div>
                     {mpesaWaiting && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                          <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
-                          <span className="text-yellow-800 font-semibold text-sm">STK Push Sent!</span>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+                          <div>
+                            {mpesaStatus === 'sending' && <p className="text-yellow-800 font-semibold text-sm">Sending STK Push...</p>}
+                            {mpesaStatus === 'waiting' && <p className="text-yellow-800 font-semibold text-sm">✅ STK Push Sent!</p>}
+                            {mpesaStatus === 'verifying' && <p className="text-yellow-800 font-semibold text-sm">🔍 Verifying payment...</p>}
+                            {mpesaStatus === 'confirmed' && <p className="text-green-700 font-semibold text-sm">✅ Payment confirmed! Creating booking...</p>}
+                          </div>
                         </div>
-                        <p className="text-yellow-700 text-xs text-center mb-2">Check your phone and enter your M-Pesa PIN.</p>
-                        <div className="bg-yellow-100 rounded-lg p-2 text-center">
-                          <p className="text-yellow-800 text-xs font-medium">⏳ Waiting for payment confirmation...</p>
-                          <p className="text-yellow-600 text-xs mt-0.5">This may take up to 60 seconds</p>
-                        </div>
+                        {mpesaStatus === 'waiting' && (
+                          <div className="bg-yellow-100 rounded-lg p-3">
+                            <p className="text-yellow-800 text-sm font-medium">📱 Check your phone: <strong>{mpesaPhone}</strong></p>
+                            <p className="text-yellow-700 text-xs mt-1">Enter your M-Pesa PIN to confirm payment of <strong>KES {totalPrice.toLocaleString()}</strong></p>
+                            <p className="text-yellow-600 text-xs mt-1">⚠️ Do NOT close this page. Booking confirms automatically after payment.</p>
+                          </div>
+                        )}
+                        {(mpesaStatus === 'verifying' || mpesaStatus === 'waiting') && (
+                          <div className="flex gap-1">
+                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(i => (
+                              <div key={i} className="flex-1 h-1 rounded-full bg-yellow-200 overflow-hidden">
+                                <div className="h-full bg-yellow-500 animate-pulse" style={{ animationDelay: `${i * 0.1}s` }} />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -507,7 +535,12 @@ export default function Booking() {
                   <button onClick={handlePayment}
                     disabled={!paymentMethod || createBooking.isPending || mpesaWaiting}
                     className="flex-1 bg-gold hover:bg-gold-light disabled:bg-gold/50 text-navy font-bold py-4 rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg shadow-gold/20">
-                    {mpesaWaiting ? 'Waiting for M-Pesa...' : createBooking.isPending ? 'Processing...' : 'Confirm Booking'}
+                    {mpesaWaiting
+                      ? mpesaStatus === 'sending' ? 'Sending...'
+                        : mpesaStatus === 'confirmed' ? 'Confirming...'
+                        : 'Waiting for PIN...'
+                      : createBooking.isPending ? 'Processing...'
+                      : 'Confirm Booking'}
                   </button>
                 </div>
               </div>
