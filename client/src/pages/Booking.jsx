@@ -100,12 +100,42 @@ export default function Booking() {
 
       setMpesaWaiting(true);
       try {
+        // 1. Send STK push
+        let checkoutRequestId = null;
         if (!isMock) {
-          await api.post('/payments/mpesa/stk-push', { phone, amount: totalPrice });
+          const stkRes = await api.post('/payments/mpesa/stk-push', { phone, amount: totalPrice });
+          checkoutRequestId = stkRes.data.checkoutRequestId;
         }
-        // Simulate STK push wait (in production, use webhook callback)
-        await new Promise(res => setTimeout(res, 3000));
-        const bookingData = { roomId, roomName: room.name, checkIn, checkOut, guests, totalPrice, specialRequests, paymentMethod: 'mpesa' };
+
+        // 2. Poll for payment status (max 60 seconds, every 5 seconds)
+        let paid = isMock; // mock rooms skip polling
+        if (!isMock && checkoutRequestId) {
+          for (let i = 0; i < 12; i++) {
+            await new Promise(res => setTimeout(res, 5000));
+            try {
+              const queryRes = await api.post('/payments/mpesa/query', { checkoutRequestId });
+              const resultCode = queryRes.data?.ResultCode;
+              if (resultCode === 0 || resultCode === '0') { paid = true; break; }
+              if (resultCode !== undefined && resultCode !== null && resultCode !== '1032') {
+                // 1032 = request cancelled by user, other codes = definitive failure
+                setError('M-Pesa payment was not completed. Please try again.');
+                setMpesaWaiting(false);
+                return;
+              }
+            } catch {
+              // Query failed — continue polling
+            }
+          }
+        }
+
+        if (!paid) {
+          setError('Payment timed out. Please try again or choose another payment method.');
+          setMpesaWaiting(false);
+          return;
+        }
+
+        // 3. Create booking after confirmed payment
+        const bookingData = { roomId, roomName: room.name, checkIn, checkOut, guests, totalPrice, specialRequests, paymentMethod: 'mpesa', paymentStatus: 'paid' };
         await createBooking.mutateAsync(bookingData);
       } catch (e) {
         setError(e.response?.data?.error || 'M-Pesa payment failed. Please try again.');
@@ -119,16 +149,27 @@ export default function Booking() {
       if (!cardExpiry.match(/^\d{2}\/\d{2}$/)) return setError('Enter expiry as MM/YY.');
       if (cardCvv.length < 3) return setError('Enter a valid CVV.');
 
-      // Create Stripe payment intent then confirm booking
       try {
-        const intentRes = await api.post('/payments/stripe/create-intent', {
-          amount: totalPrice, currency: 'kes',
-          description: `${room.name} — ${checkIn} to ${checkOut}`,
-        });
-        // In production, use Stripe.js to confirm the intent with card details
-        // For now, confirm directly (test mode)
-        await api.post('/payments/stripe/confirm', { paymentIntentId: intentRes.data.paymentIntentId });
-        const bookingData = { roomId, roomName: room.name, checkIn, checkOut, guests, totalPrice, specialRequests, paymentMethod: 'card' };
+        // Try Stripe if configured, otherwise create booking directly
+        let paymentConfirmed = false;
+        if (!isMock) {
+          try {
+            const intentRes = await api.post('/payments/stripe/create-intent', {
+              amount: totalPrice, currency: 'kes',
+              description: `${room.name} — ${checkIn} to ${checkOut}`,
+            });
+            await api.post('/payments/stripe/confirm', { paymentIntentId: intentRes.data.paymentIntentId });
+            paymentConfirmed = true;
+          } catch (stripeErr) {
+            // Stripe not configured — fall through to direct booking
+            if (stripeErr.response?.status !== 503) throw stripeErr;
+          }
+        }
+        const bookingData = {
+          roomId, roomName: room.name, checkIn, checkOut, guests, totalPrice, specialRequests,
+          paymentMethod: 'card',
+          paymentStatus: paymentConfirmed ? 'paid' : 'pending',
+        };
         createBooking.mutate(bookingData);
       } catch (e) {
         setError(e.response?.data?.error || 'Card payment failed. Please try again.');
@@ -370,12 +411,16 @@ export default function Booking() {
                       <p className="text-xs text-muted mt-1">Accepts 07XX, 01XX, or +254 format</p>
                     </div>
                     {mpesaWaiting && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                         <div className="flex items-center justify-center gap-2 mb-2">
                           <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
                           <span className="text-yellow-800 font-semibold text-sm">STK Push Sent!</span>
                         </div>
-                        <p className="text-yellow-700 text-xs">Check your phone and enter your M-Pesa PIN to complete payment.</p>
+                        <p className="text-yellow-700 text-xs text-center mb-2">Check your phone and enter your M-Pesa PIN.</p>
+                        <div className="bg-yellow-100 rounded-lg p-2 text-center">
+                          <p className="text-yellow-800 text-xs font-medium">⏳ Waiting for payment confirmation...</p>
+                          <p className="text-yellow-600 text-xs mt-0.5">This may take up to 60 seconds</p>
+                        </div>
                       </div>
                     )}
                   </div>
