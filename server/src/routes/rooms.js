@@ -46,20 +46,35 @@ router.get('/:id', async (req, res) => {
 // POST /api/rooms — admin: create room with optimized photos
 router.post('/', authenticate, isAdmin, upload.array('photos', 10), validate(roomSchema), async (req, res) => {
   try {
-    const { name, description, price, capacity, amenities } = req.validated;
+    const { name, description, price, capacity, amenities, tourUrl } = req.validated;
     const photoAssets = [];
 
     if (req.files?.length) {
       for (const file of req.files) {
-        const urls = await optimizeAndUpload(file.buffer, file.originalname, 'rooms');
-        photoAssets.push(urls);
+        try {
+          const urls = await optimizeAndUpload(file.buffer, file.originalname, 'rooms');
+          if (urls) photoAssets.push(urls);
+        } catch (photoErr) {
+          console.warn('Photo upload skipped:', photoErr.message);
+        }
       }
     }
 
-    const room = { name, description, price, capacity, amenities: amenities || [], photos: photoAssets, available: true, createdAt: new Date().toISOString() };
+    const room = {
+      name,
+      description: description || '',
+      price,
+      capacity,
+      amenities: amenities || [],
+      photos: photoAssets,
+      tourUrl: tourUrl || '',
+      available: true,
+      createdAt: new Date().toISOString(),
+    };
     const docRef = await db.collection('rooms').add(room);
     res.status(201).json({ id: docRef.id, ...room });
   } catch (err) {
+    console.error('Room create error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

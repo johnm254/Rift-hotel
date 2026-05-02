@@ -45,13 +45,18 @@ router.post('/', authenticate, isAdmin, upload.single('photo'), validate(mealSch
     const { name, description, price, category, dietary } = req.validated;
     let photo = null;
     if (req.file) {
-      const urls = await optimizeAndUpload(req.file.buffer, req.file.originalname, 'meals');
-      photo = urls;
+      try {
+        const urls = await optimizeAndUpload(req.file.buffer, req.file.originalname, 'meals');
+        photo = urls;
+      } catch (photoErr) {
+        console.warn('Meal photo upload skipped:', photoErr.message);
+      }
     }
-    const meal = { name, description, price, category: category || 'main', dietary: dietary || [], photo, available: true, createdAt: new Date().toISOString() };
+    const meal = { name, description: description || '', price, category: category || 'main', dietary: dietary || [], photo, available: true, createdAt: new Date().toISOString() };
     const docRef = await db.collection('meals').add(meal);
     res.status(201).json({ id: docRef.id, ...meal });
   } catch (err) {
+    console.error('Meal create error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
