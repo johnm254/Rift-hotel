@@ -12,17 +12,28 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 router.get('/', async (req, res) => {
   try {
     const { limit, cursor } = paginationSchema.parse(req.query);
-    let query = db.collection('meals').orderBy('createdAt', 'desc').limit(limit + 1);
-    if (req.query.category) query = query.where('category', '==', req.query.category);
-    if (cursor) {
-      const cursorDoc = await db.collection('meals').doc(cursor).get();
-      if (cursorDoc.exists) query = query.startAfter(cursorDoc);
+    let meals = [];
+    try {
+      let query = db.collection('meals').orderBy('createdAt', 'desc').limit(limit + 1);
+      if (req.query.category) query = query.where('category', '==', req.query.category);
+      if (cursor) {
+        const cursorDoc = await db.collection('meals').doc(cursor).get();
+        if (cursorDoc.exists) query = query.startAfter(cursorDoc);
+      }
+      const snapshot = await query.get();
+      meals = snapshot.docs.slice(0, limit).map(d => ({ id: d.id, ...d.data() }));
+      const categoriesSnap = await db.collection('meals').get();
+      const categories = [...new Set(categoriesSnap.docs.map(d => d.data().category).filter(Boolean))];
+      return res.json({ meals, categories, nextCursor: snapshot.docs.length > limit ? snapshot.docs[limit - 1].id : null, hasMore: snapshot.docs.length > limit });
+    } catch {
+      // Fallback without ordering
+      let query = db.collection('meals').limit(limit);
+      if (req.query.category) query = query.where('category', '==', req.query.category);
+      const snapshot = await query.get();
+      meals = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const categories = [...new Set(meals.map(m => m.category).filter(Boolean))];
+      return res.json({ meals, categories, nextCursor: null, hasMore: false });
     }
-    const snapshot = await query.get();
-    const meals = snapshot.docs.slice(0, limit).map(d => ({ id: d.id, ...d.data() }));
-    const categoriesSnap = await db.collection('meals').get();
-    const categories = [...new Set(categoriesSnap.docs.map(d => d.data().category).filter(Boolean))];
-    res.json({ meals, categories, nextCursor: snapshot.docs.length > limit ? snapshot.docs[limit - 1].id : null, hasMore: snapshot.docs.length > limit });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

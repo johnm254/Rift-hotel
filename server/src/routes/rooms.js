@@ -12,16 +12,24 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 router.get('/', async (req, res) => {
   try {
     const { limit, cursor } = paginationSchema.parse(req.query);
-    let query = db.collection('rooms').orderBy('createdAt', 'desc').limit(limit + 1);
-    if (cursor) {
-      const cursorDoc = await db.collection('rooms').doc(cursor).get();
-      if (cursorDoc.exists) query = query.startAfter(cursorDoc);
+    let rooms = [];
+    try {
+      let query = db.collection('rooms').orderBy('createdAt', 'desc').limit(limit + 1);
+      if (cursor) {
+        const cursorDoc = await db.collection('rooms').doc(cursor).get();
+        if (cursorDoc.exists) query = query.startAfter(cursorDoc);
+      }
+      const snapshot = await query.get();
+      rooms = snapshot.docs.slice(0, limit).map(doc => ({ id: doc.id, ...doc.data() }));
+      const hasMore = snapshot.docs.length > limit;
+      const nextCursor = hasMore ? snapshot.docs[limit - 1].id : null;
+      return res.json({ rooms, nextCursor, hasMore });
+    } catch {
+      // Fallback: fetch without ordering if index missing
+      const snapshot = await db.collection('rooms').limit(limit).get();
+      rooms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      return res.json({ rooms, nextCursor: null, hasMore: false });
     }
-    const snapshot = await query.get();
-    const rooms = snapshot.docs.slice(0, limit).map(doc => ({ id: doc.id, ...doc.data() }));
-    const hasMore = snapshot.docs.length > limit;
-    const nextCursor = hasMore ? snapshot.docs[limit - 1].id : null;
-    res.json({ rooms, nextCursor, hasMore });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -30,15 +38,36 @@ router.get('/', async (req, res) => {
 // GET /api/rooms/:id — public: single room with reviews
 router.get('/:id', async (req, res) => {
   try {
-    const [roomDoc, reviewsSnap] = await Promise.all([
-      db.collection('rooms').doc(req.params.id).get(),
-      db.collection('reviews').where('roomId', '==', req.params.id).orderBy('createdAt', 'desc').limit(20).get()
-    ]);
+    const roomDoc = await db.collection('rooms').doc(req.params.id).get();
     if (!roomDoc.exists) return res.status(404).json({ error: 'Room not found' });
-    const reviews = reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const avgRating = reviews.length ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : null;
+
+    // Fetch reviews — handle missing index gracefully
+    let reviews = [];
+    try {
+      const reviewsSnap = await db.collection('reviews')
+        .where('roomId', '==', req.params.id)
+        .orderBy('createdAt', 'desc')
+        .limit(20)
+        .get();
+      reviews = reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch {
+      // Index not ready — fetch without ordering
+      try {
+        const reviewsSnap = await db.collection('reviews')
+          .where('roomId', '==', req.params.id)
+          .limit(20)
+          .get();
+        reviews = reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch { reviews = []; }
+    }
+
+    const avgRating = reviews.length
+      ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+      : null;
+
     res.json({ id: roomDoc.id, ...roomDoc.data(), reviews, avgRating, reviewCount: reviews.length });
   } catch (err) {
+    console.error('Room fetch error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
