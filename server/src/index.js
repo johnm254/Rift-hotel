@@ -19,10 +19,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many requests, try again later.' } });
-const paymentLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Too many payment attempts.' } });
-const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
+// Rate limiting — more generous for payment testing
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, message: { error: 'Too many requests, try again later.' } });
+const paymentLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, message: { error: 'Too many payment attempts. Please wait 15 minutes.' } });
+const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 
 app.use('/api/auth', authLimiter);
 app.use('/api/payments/mpesa', paymentLimiter);
