@@ -9,14 +9,26 @@ function getTransporter() {
     console.warn('⚠️  SMTP not configured — emails will be skipped. Set SMTP_USER and SMTP_PASS in .env');
     return null;
   }
+
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT) || 587;
+
   _transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true',
+    host,
+    port,
+    secure: port === 465,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    // Required for Gmail on cloud servers
+    tls: {
+      rejectUnauthorized: false,
+      ciphers: 'SSLv3',
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   });
   return _transporter;
 }
@@ -32,6 +44,8 @@ async function sendMail(options) {
     return result;
   } catch (err) {
     console.error('❌ Email send failed to:', options.to, '| Error:', err.message);
+    // Reset transporter so next attempt creates a fresh connection
+    _transporter = null;
     return { error: err.message };
   }
 }
