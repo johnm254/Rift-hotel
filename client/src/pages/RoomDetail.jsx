@@ -122,8 +122,21 @@ export default function RoomDetail() {
 
   const { data: room, isLoading } = useQuery({
     queryKey: ['room', id],
-    queryFn: () => api.get(`/rooms/${id}`).then(r => r.data)
-      .catch(() => mockRooms.find(r => r.id === id) || null),
+    queryFn: async () => {
+      // First try mock data if it's a mock ID
+      if (id?.startsWith('room-')) {
+        const mock = mockRooms.find(r => r.id === id);
+        if (mock) return mock;
+      }
+      // Try API
+      try {
+        const res = await api.get(`/rooms/${id}`);
+        return res.data;
+      } catch {
+        // Fall back to mock
+        return mockRooms.find(r => r.id === id) || null;
+      }
+    },
   });
 
   const { data: reviews = [] } = useQuery({
@@ -166,7 +179,16 @@ export default function RoomDetail() {
   });
 
   if (isLoading) return <Loading />;
-  if (!room) return <div className="text-center py-20 text-muted">Room not found.</div>;
+  if (!room) return (
+    <div className="text-center py-20 px-4">
+      <div className="text-5xl mb-4">🏨</div>
+      <h2 className="text-2xl font-serif font-bold text-navy mb-2">Room not found</h2>
+      <p className="text-muted mb-6">This room may have been removed or is temporarily unavailable.</p>
+      <a href="/rooms" className="inline-block bg-gold hover:bg-gold-light text-navy font-bold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all">
+        Browse All Rooms
+      </a>
+    </div>
+  );
 
   const photos = room.photos?.length
     ? room.photos.map(p => (typeof p === 'string' ? p : p.full))
