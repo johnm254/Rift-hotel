@@ -1,25 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AdminLogin() {
-  const { login, loginWithGoogle, user, isAdmin } = useAuth();
+  const { login, loginWithGoogle, user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
 
-  // Already logged in as admin — go straight to dashboard
-  if (user && isAdmin) {
-    navigate('/admin/dashboard', { replace: true });
-    return null;
-  }
+  // Once auth resolves, redirect if already admin
+  useEffect(() => {
+    if (!loading && user && isAdmin) {
+      navigate('/admin/dashboard', { replace: true });
+    }
+  }, [loading, user, isAdmin, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setFormLoading(true);
     try {
       const data = await login(email, password);
       if (data?.admin || data?.role === 'admin') {
@@ -30,13 +31,13 @@ export default function AdminLogin() {
     } catch (err) {
       setError(err.message || 'Login failed.');
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
   const handleGoogle = async () => {
     setError('');
-    setLoading(true);
+    setFormLoading(true);
     try {
       const data = await loginWithGoogle();
       if (data?.admin || data?.role === 'admin') {
@@ -47,7 +48,7 @@ export default function AdminLogin() {
     } catch (err) {
       setError(err.message || 'Google sign-in failed.');
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
@@ -144,9 +145,9 @@ export default function AdminLogin() {
               />
             </div>
 
-            <button type="submit" disabled={loading}
+            <button type="submit" disabled={formLoading}
               className="w-full py-3.5 rounded-xl font-bold text-sm uppercase tracking-widest transition-all"
-              style={{ background: loading ? 'rgba(201,169,110,0.5)' : '#C9A96E', color: '#1B2A4A' }}>
+              style={{ background: formLoading ? 'rgba(201,169,110,0.5)' : '#C9A96E', color: '#1B2A4A' }}>
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin"></span>
@@ -162,7 +163,7 @@ export default function AdminLogin() {
             <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
           </div>
 
-          <button onClick={handleGoogle} disabled={loading}
+          <button onClick={handleGoogle} disabled={formLoading}
             className="w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-3 transition-all"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}>
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -191,3 +192,5 @@ export default function AdminLogin() {
     </div>
   );
 }
+
+

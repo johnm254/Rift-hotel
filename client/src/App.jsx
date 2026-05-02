@@ -62,17 +62,15 @@ function AppContent() {
 
   const isAdminRoute = location.pathname.startsWith('/admin');
 
-  if (loading) return <Loading full />;
-
+  // For admin routes: show the admin router immediately (AdminLogin handles its own auth state)
+  // Don't block on global loading — AdminLogin will redirect once auth resolves
   if (isAdminRoute) {
     return (
       <>
         <Toaster position="top-right" richColors closeButton />
         <PageWrapper>
           <Routes>
-            {/* Admin login — no auth required, handles its own redirect */}
             <Route path="/admin" element={<AdminLogin />} />
-            {/* Admin dashboard routes — require admin role */}
             <Route path="/admin/dashboard" element={<ProtectedRoute admin><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/rooms" element={<ProtectedRoute admin><AdminLayout><AdminRooms /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/meals" element={<ProtectedRoute admin><AdminLayout><AdminMeals /></AdminLayout></ProtectedRoute>} />
@@ -89,6 +87,8 @@ function AppContent() {
       </>
     );
   }
+
+  if (loading) return <Loading full />;
 
   return (
     <div className="min-h-screen flex flex-col bg-cream">
