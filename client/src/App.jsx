@@ -1,5 +1,5 @@
 import { Toaster } from 'sonner';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -79,6 +79,8 @@ function AppContent() {
             <Route path="/admin/packages" element={<ProtectedRoute admin><AdminLayout><AdminPackages /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/pricing" element={<ProtectedRoute admin><AdminLayout><AdminPricing /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/properties" element={<ProtectedRoute admin><AdminLayout><AdminProperties /></AdminLayout></ProtectedRoute>} />
+            {/* Catch-all: redirect non-admins to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </PageWrapper>
       </>
