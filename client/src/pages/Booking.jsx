@@ -119,8 +119,37 @@ export default function Booking() {
       if (!cardExpiry.match(/^\d{2}\/\d{2}$/)) return setError('Enter expiry as MM/YY.');
       if (cardCvv.length < 3) return setError('Enter a valid CVV.');
 
-      const bookingData = { roomId, roomName: room.name, checkIn, checkOut, guests, totalPrice, specialRequests, paymentMethod: 'card' };
-      createBooking.mutate(bookingData);
+      // Create Stripe payment intent then confirm booking
+      try {
+        const intentRes = await api.post('/payments/stripe/create-intent', {
+          amount: totalPrice, currency: 'kes',
+          description: `${room.name} — ${checkIn} to ${checkOut}`,
+        });
+        // In production, use Stripe.js to confirm the intent with card details
+        // For now, confirm directly (test mode)
+        await api.post('/payments/stripe/confirm', { paymentIntentId: intentRes.data.paymentIntentId });
+        const bookingData = { roomId, roomName: room.name, checkIn, checkOut, guests, totalPrice, specialRequests, paymentMethod: 'card' };
+        createBooking.mutate(bookingData);
+      } catch (e) {
+        setError(e.response?.data?.error || 'Card payment failed. Please try again.');
+      }
+
+    } else if (paymentMethod === 'pesapal') {
+      // Redirect to Pesapal hosted payment page
+      try {
+        const res = await api.post('/payments/pesapal/initiate', {
+          amount: totalPrice, currency: 'KES',
+          bookingId: `booking-${Date.now()}`,
+          description: `${room.name} — ${checkIn} to ${checkOut}`,
+        });
+        if (res.data.redirectUrl) {
+          window.location.href = res.data.redirectUrl;
+        } else {
+          setError('Pesapal redirect failed. Please try another payment method.');
+        }
+      } catch (e) {
+        setError(e.response?.data?.error || 'Bank payment failed. Please try again.');
+      }
 
     } else if (paymentMethod === 'pay-on-arrival') {
       const bookingData = { roomId, roomName: room.name, checkIn, checkOut, guests, totalPrice, specialRequests, paymentMethod: 'pay-on-arrival' };
@@ -304,16 +333,17 @@ export default function Booking() {
                 {/* Payment method selector */}
                 <div>
                   <label className="block text-sm font-medium text-navy mb-3">Select Payment Method</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
                       { id: 'mpesa', icon: '📱', label: 'M-Pesa', sub: 'STK Push' },
                       { id: 'card', icon: '💳', label: 'Card', sub: 'Visa / Mastercard' },
+                      { id: 'pesapal', icon: '🏦', label: 'Bank / Pesapal', sub: 'All cards & banks' },
                       { id: 'pay-on-arrival', icon: '🏨', label: 'Pay on Arrival', sub: 'At check-in' },
                     ].map(m => (
                       <button key={m.id} onClick={() => { setPaymentMethod(m.id); setError(''); }}
-                        className={`p-3 sm:p-4 rounded-xl border-2 flex sm:flex-col items-center sm:text-center gap-3 sm:gap-1 transition-all ${paymentMethod === m.id ? 'border-gold bg-gold/5 shadow-sm' : 'border-cream-dark hover:border-gold/40'}`}>
-                        <div className="text-2xl">{m.icon}</div>
-                        <div>
+                        className={`p-3 sm:p-4 rounded-xl border-2 flex items-center gap-3 transition-all ${paymentMethod === m.id ? 'border-gold bg-gold/5 shadow-sm' : 'border-cream-dark hover:border-gold/40'}`}>
+                        <div className="text-2xl flex-shrink-0">{m.icon}</div>
+                        <div className="text-left">
                           <div className="text-sm font-bold text-navy">{m.label}</div>
                           <div className="text-xs text-muted">{m.sub}</div>
                         </div>
@@ -393,7 +423,24 @@ export default function Booking() {
                   </div>
                 )}
 
-                {/* Pay on arrival */}
+                {/* Pesapal — bank/card gateway */}
+                {paymentMethod === 'pesapal' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl flex-shrink-0">🏦</span>
+                      <div>
+                        <p className="font-semibold text-navy mb-1">Secure Bank Payment via Pesapal</p>
+                        <p className="text-sm text-muted">Accepts Visa, Mastercard, M-Pesa, and bank transfers. You'll be redirected to Pesapal's secure payment page.</p>
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {['Visa', 'Mastercard', 'M-Pesa', 'Bank Transfer'].map(p => (
+                            <span key={p} className="text-xs bg-white border border-blue-200 text-blue-700 px-2 py-0.5 rounded-full font-medium">{p}</span>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted mt-2">🔒 256-bit SSL encrypted · PCI DSS compliant</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {paymentMethod === 'pay-on-arrival' && (
                   <div className="bg-cream rounded-xl p-5 space-y-2 text-sm text-muted">
                     <div className="flex items-start gap-3">

@@ -128,10 +128,16 @@ router.post('/', authenticate, validate(bookingSchema), async (req, res) => {
     const docRef = await db.collection('bookings').add(booking);
     const saved = { id: docRef.id, ...booking };
 
-    // Send confirmation email (async, don't block response)
+    // Send confirmation email + WhatsApp (async, don't block response)
     sendBookingConfirmation(req.user.email, saved).catch(e => console.warn('Email send failed:', e.message));
-    // Send SMS confirmation
-    if (req.user.phone) sendBookingSMS(req.user.phone, saved).catch(() => {});
+    // Send WhatsApp booking confirmation
+    const { sendBookingWhatsApp } = require('../services/whatsapp');
+    if (req.user.phone) sendBookingWhatsApp(req.user.phone, saved).catch(() => {});
+    // Also try to get phone from user profile
+    db.collection('users').doc(req.user.uid).get().then(userDoc => {
+      const phone = userDoc.data()?.phone;
+      if (phone && phone !== req.user.phone) sendBookingWhatsApp(phone, saved).catch(() => {});
+    }).catch(() => {});
 
     res.status(201).json(saved);
   } catch (err) {
@@ -190,19 +196,16 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
     const doc = await db.collection('bookings').doc(req.params.id).get();
     const booking = { id: doc.id, ...doc.data() };
 
-    // Send status update email (not for check-out)
     if (status !== 'checked-out') {
       sendStatusUpdate(booking.userEmail, booking, status).catch(e => console.warn('Email send failed:', e.message));
       if (status === 'approved') {
-        // Get user phone for SMS
+        const { sendApprovalWhatsApp } = require('../services/whatsapp');
         const userDoc = await db.collection('users').doc(booking.userId).get().catch(() => null);
         const phone = userDoc?.data()?.phone;
-        if (phone) sendBookingApprovedSMS(phone, booking).catch(() => {});
+        if (phone) {
+          sendApprovalWhatsApp(phone, booking).catch(() => {});
+        }
       }
-    } else {
-      const userDoc = await db.collection('users').doc(booking.userId).get().catch(() => null);
-      const phone = userDoc?.data()?.phone;
-      if (phone) sendCheckoutSMS(phone, booking).catch(() => {});
     }
 
     res.json(booking);
