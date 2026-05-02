@@ -19,7 +19,7 @@ let mpesaToken = null, tokenExpiry = 0;
 async function getMpesaToken() {
   if (mpesaToken && Date.now() < tokenExpiry) return mpesaToken;
   const auth = Buffer.from(`${process.env.MPESA_CONSUMER_KEY}:${process.env.MPESA_CONSUMER_SECRET}`).toString('base64');
-  const baseUrl = process.env.MPESA_ENV === 'production'
+  const baseUrl = (process.env.MPESA_ENV || process.env.MPESA_ENVIRONMENT) === 'production'
     ? 'https://api.safaricom.co.ke'
     : 'https://sandbox.safaricom.co.ke';
   const { data } = await axios.get(`${baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
@@ -38,7 +38,7 @@ router.post('/mpesa/stk-push', authenticate, validate(mpesaSchema), async (req, 
     if (!formattedPhone.startsWith('254')) formattedPhone = '254' + formattedPhone;
 
     const token = await getMpesaToken();
-    const baseUrl = process.env.MPESA_ENV === 'production'
+    const baseUrl = (process.env.MPESA_ENV || process.env.MPESA_ENVIRONMENT) === 'production'
       ? 'https://api.safaricom.co.ke'
       : 'https://sandbox.safaricom.co.ke';
     const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
@@ -132,7 +132,7 @@ router.post('/mpesa/query', authenticate, async (req, res) => {
   try {
     const { checkoutRequestId } = req.body;
     const token = await getMpesaToken();
-    const baseUrl = process.env.MPESA_ENV === 'production'
+    const baseUrl = (process.env.MPESA_ENV || process.env.MPESA_ENVIRONMENT) === 'production'
       ? 'https://api.safaricom.co.ke'
       : 'https://sandbox.safaricom.co.ke';
     const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
@@ -364,3 +364,4 @@ router.get('/history', authenticate, async (req, res) => {
 });
 
 module.exports = router;
+

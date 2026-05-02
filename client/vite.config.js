@@ -16,5 +16,7 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:5000'
     }
-  }
+  },
+  // In production, API calls go to the deployed server URL
+  // Set VITE_API_URL in Vercel environment variables
 })
