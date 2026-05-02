@@ -6,7 +6,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const admin = require('firebase-admin');
 
-const TARGET_EMAIL = 'mwasjohn6911@gmail.com';
+const TARGET_EMAIL = 'johnmwangi1729@gmail.com';
 
 const serviceAccount = {
   type: 'service_account',

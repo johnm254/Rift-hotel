@@ -144,7 +144,7 @@ export default function Navbar() {
                       <span className="hidden xl:block">{user.name?.split(' ')[0] || t('myAccount')}</span>
                     </Link>
                     {isAdmin && (
-                      <Link to="/admin"
+                      <Link to="/admin/dashboard"
                         className="px-3 py-1.5 rounded-lg text-xs font-bold text-gold bg-gold/10 hover:bg-gold/20 border border-gold/20 transition-all uppercase tracking-widest">
                         Admin
                       </Link>
@@ -263,7 +263,7 @@ export default function Navbar() {
                 </div>
               </Link>
               {isAdmin && (
-                <Link to="/admin"
+                <Link to="/admin/dashboard"
                   className="block text-center py-2.5 rounded-xl text-xs font-bold text-gold bg-gold/10 border border-gold/20 uppercase tracking-widest transition-all hover:bg-gold/20">
                   Admin Panel
                 </Link>

@@ -41,6 +41,7 @@ import Housekeeping from './pages/admin/Housekeeping';
 import AdminPackages from './pages/admin/Packages';
 import AdminPricing from './pages/admin/Pricing';
 import AdminProperties from './pages/admin/Properties';
+import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './components/AdminLayout';
 
 // Push notification setup
@@ -69,7 +70,10 @@ function AppContent() {
         <Toaster position="top-right" richColors closeButton />
         <PageWrapper>
           <Routes>
-            <Route path="/admin" element={<ProtectedRoute admin><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
+            {/* Admin login — no auth required, handles its own redirect */}
+            <Route path="/admin" element={<AdminLogin />} />
+            {/* Admin dashboard routes — require admin role */}
+            <Route path="/admin/dashboard" element={<ProtectedRoute admin><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/rooms" element={<ProtectedRoute admin><AdminLayout><AdminRooms /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/meals" element={<ProtectedRoute admin><AdminLayout><AdminMeals /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/bookings" element={<ProtectedRoute admin><AdminLayout><AdminBookings /></AdminLayout></ProtectedRoute>} />
@@ -79,8 +83,7 @@ function AppContent() {
             <Route path="/admin/packages" element={<ProtectedRoute admin><AdminLayout><AdminPackages /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/pricing" element={<ProtectedRoute admin><AdminLayout><AdminPricing /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/properties" element={<ProtectedRoute admin><AdminLayout><AdminProperties /></AdminLayout></ProtectedRoute>} />
-            {/* Catch-all: redirect non-admins to home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
         </PageWrapper>
       </>
