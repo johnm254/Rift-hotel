@@ -30,7 +30,9 @@ export default function Booking() {
   const [promoDiscount, setPromoDiscount] = useState(null);
   const [promoLoading, setPromoLoading] = useState(false);
 
-  const isMock = roomId?.startsWith('room-');
+  // Only skip real payment in local dev with mock rooms
+  const isDev = import.meta.env.DEV;
+  const isMock = roomId?.startsWith('room-') && isDev;
 
   const { data: room, isLoading } = useQuery({
     queryKey: ['room', roomId],
@@ -77,6 +79,7 @@ export default function Booking() {
 
   const createBooking = useMutation({
     mutationFn: (data) => {
+      // Only use mock in local dev
       if (isMock) return Promise.resolve({ data: { id: 'mock-' + Date.now(), ...data } });
       return api.post('/bookings', data);
     },
