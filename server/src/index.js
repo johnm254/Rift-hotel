@@ -39,7 +39,15 @@ app.use('/api/properties', require('./routes/properties'));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const checks = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    firebase: !!process.env.FIREBASE_PROJECT_ID,
+    smtp: !!process.env.SMTP_USER,
+    mpesa: !!process.env.MPESA_CONSUMER_KEY,
+    sms: !!process.env.AT_API_KEY,
+  };
+  res.json(checks);
 });
 
 app.listen(PORT, () => {

@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
 // GET /api/properties/all — admin: all including inactive
 router.get('/all', authenticate, isAdmin, async (req, res) => {
   try {
-    const snap = await db.collection('properties').orderBy('createdAt', 'desc').get();
+    const snap = await db.collection('properties').get();
     res.json({ properties: snap.docs.map(d => ({ id: d.id, ...d.data() })) });
   } catch (err) {
     res.status(500).json({ error: err.message });
