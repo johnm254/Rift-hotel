@@ -35,44 +35,51 @@ async function sendMail(options) {
 }
 
 async function sendBookingConfirmation(to, booking) {
+  const isOwner = booking._isOwnerCopy;
   return sendMail({
     to,
-    subject: `Booking Confirmed — ${booking.roomName}`,
+    subject: isOwner
+      ? `🏨 New Booking — ${booking.roomName} (${booking.userName})`
+      : `✅ Booking Confirmed — ${booking.roomName} | Azura Haven`,
     html: `
       <div style="font-family:'Georgia',serif;max-width:560px;margin:0 auto;background:#F5F1EB;border-radius:16px;overflow:hidden">
         <div style="background:#1B2A4A;padding:32px;text-align:center">
           <h1 style="color:#C9A96E;margin:0;font-size:24px">🏨 Azura Haven</h1>
+          <p style="color:rgba(245,241,235,0.6);margin:8px 0 0;font-size:13px">Westlands, Nairobi · reservations@azurahaven.com</p>
         </div>
         <div style="padding:32px">
-          <h2 style="color:#1B2A4A;margin:0 0 8px">Booking Confirmed! 🎉</h2>
-          <p style="color:#6B7280;margin:0 0 24px">Your stay has been booked successfully.</p>
+          <h2 style="color:#1B2A4A;margin:0 0 8px">${isOwner ? '📋 New Booking Received' : 'Booking Confirmed! 🎉'}</h2>
+          <p style="color:#6B7280;margin:0 0 24px">
+            ${isOwner
+              ? `<strong>${booking.userName}</strong> (${booking.userEmail}) has made a booking.`
+              : `Dear <strong>${booking.userName?.split(' ')[0] || 'Guest'}</strong>, your stay has been booked successfully.`
+            }
+          </p>
           <div style="background:white;border-radius:12px;padding:20px;margin-bottom:16px">
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #EBE3D6">
-              <span style="color:#6B7280">Room</span>
-              <span style="color:#1B2A4A;font-weight:600">${booking.roomName}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #EBE3D6">
-              <span style="color:#6B7280">Check-in</span>
-              <span style="color:#1B2A4A;font-weight:600">${booking.checkIn}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #EBE3D6">
-              <span style="color:#6B7280">Check-out</span>
-              <span style="color:#1B2A4A;font-weight:600">${booking.checkOut}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #EBE3D6">
-              <span style="color:#6B7280">Guests</span>
-              <span style="color:#1B2A4A;font-weight:600">${booking.guests}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0">
-              <span style="color:#6B7280">Total</span>
-              <span style="color:#C9A96E;font-weight:700;font-size:18px">KES ${booking.totalPrice?.toLocaleString()}</span>
+            ${[
+              ['Room', booking.roomName],
+              ['Check-in', booking.checkIn],
+              ['Check-out', booking.checkOut],
+              ['Guests', booking.guests],
+              ['Payment Method', booking.paymentMethod || 'Pending'],
+              ['Payment Status', booking.paymentStatus === 'paid' ? '✅ Paid' : '⏳ Pending'],
+              ['Booking Ref', booking.id?.slice(0, 8).toUpperCase()],
+            ].map(([label, val]) => `
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #EBE3D6">
+                <span style="color:#6B7280">${label}</span>
+                <span style="color:#1B2A4A;font-weight:600">${val || '—'}</span>
+              </div>
+            `).join('')}
+            <div style="display:flex;justify-content:space-between;padding:12px 0 0">
+              <span style="color:#6B7280;font-weight:600">Total</span>
+              <span style="color:#C9A96E;font-weight:700;font-size:20px">KES ${booking.totalPrice?.toLocaleString()}</span>
             </div>
           </div>
-          ${booking.specialRequests ? `<p style="color:#6B7280;font-style:italic;background:white;border-radius:12px;padding:16px;margin:0 0 16px">💬 ${booking.specialRequests}</p>` : ''}
-          <p style="color:#6B7280;font-size:13px;margin:0">Need to modify your booking? Visit your account at Azura Haven.</p>
+          ${booking.specialRequests ? `<p style="color:#6B7280;font-style:italic;background:white;border-radius:12px;padding:16px;margin:0 0 16px">💬 Special request: ${booking.specialRequests}</p>` : ''}
+          ${!isOwner ? `<p style="color:#6B7280;font-size:13px;margin:0">Check-in from 2:00 PM · Check-out by 11:00 AM<br>Questions? Call us: <strong>+254 700 000 000</strong></p>` : ''}
         </div>
         <div style="background:#1B2A4A;padding:16px;text-align:center">
-          <p style="color:#C9A96E;margin:0;font-size:12px">Nairobi, Kenya · reservations@azurahaven.com</p>
+          <p style="color:#C9A96E;margin:0;font-size:12px">Azura Haven · Nairobi, Kenya · reservations@azurahaven.com</p>
         </div>
       </div>
     `,

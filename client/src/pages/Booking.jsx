@@ -551,21 +551,43 @@ export default function Booking() {
                   </button>
                 </div>
 
-                {/* QR Code Room Key */}
+                {/* QR Code — M-Pesa PayBill or Booking Reference */}
                 <div className="border-t border-cream-dark pt-5">
-                  <p className="text-xs text-muted uppercase tracking-widest mb-3 text-center">Your Digital Room Key</p>
+                  <p className="text-xs text-muted uppercase tracking-widest mb-3 text-center">
+                    {paymentMethod === 'pay-on-arrival' ? 'Pay with M-Pesa QR at Check-in' : 'Your Booking QR Code'}
+                  </p>
                   <div className="flex justify-center">
                     <div className="bg-white p-3 rounded-2xl border-2 border-gold/20 shadow-sm inline-block">
                       <QRCodeSVG
-                        value={JSON.stringify({ bookingId: `booking-${Date.now()}`, room: room.name, checkIn, checkOut, guest: user?.name })}
-                        size={140}
+                        value={
+                          paymentMethod === 'pay-on-arrival'
+                            // M-Pesa PayBill QR — scan to pay at front desk
+                            ? `mpesa://pay?businessNumber=${174379}&accountNumber=AZURA-${checkIn?.replace(/-/g,'')}&amount=${totalPrice}`
+                            // Booking reference QR for confirmed bookings
+                            : JSON.stringify({
+                                hotel: 'Azura Haven',
+                                room: room.name,
+                                checkIn,
+                                checkOut,
+                                guests,
+                                total: `KES ${totalPrice.toLocaleString()}`,
+                                guest: user?.name,
+                                email: user?.email,
+                                ref: `AH-${Date.now().toString(36).toUpperCase()}`,
+                              })
+                        }
+                        size={150}
                         bgColor="#FFFFFF"
                         fgColor="#1B2A4A"
                         level="M"
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-muted text-center mt-2">Show this QR code at the front desk for express check-in</p>
+                  <p className="text-xs text-muted text-center mt-2">
+                    {paymentMethod === 'pay-on-arrival'
+                      ? 'Scan at front desk to pay via M-Pesa · Shortcode: 174379'
+                      : 'Show at reception for express check-in'}
+                  </p>
                 </div>
               </div>
             )}

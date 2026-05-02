@@ -121,22 +121,29 @@ router.post('/', authenticate, validate(bookingSchema), async (req, res) => {
       guests, totalPrice,
       specialRequests: specialRequests || '',
       status: 'pending',
-      paymentStatus: 'pending',
+      paymentStatus: req.body.paymentStatus || 'pending',
+      paymentMethod: req.body.paymentMethod || '',
+      mpesaPhone: req.body.mpesaPhone || '',
       createdAt: new Date().toISOString(),
     };
 
     const docRef = await db.collection('bookings').add(booking);
     const saved = { id: docRef.id, ...booking };
 
-    // Send confirmation email + WhatsApp (async, don't block response)
+    // Send confirmation email to the guest's registered email
     sendBookingConfirmation(req.user.email, saved).catch(e => console.warn('Email send failed:', e.message));
-    // Send WhatsApp booking confirmation
+
+    // Also notify hotel owner by email
+    const ownerEmail = process.env.SMTP_USER;
+    if (ownerEmail) {
+      sendBookingConfirmation(ownerEmail, { ...saved, _isOwnerCopy: true }).catch(() => {});
+    }
+
+    // Send WhatsApp/SMS to guest's phone if available
     const { sendBookingWhatsApp } = require('../services/whatsapp');
-    if (req.user.phone) sendBookingWhatsApp(req.user.phone, saved).catch(() => {});
-    // Also try to get phone from user profile
     db.collection('users').doc(req.user.uid).get().then(userDoc => {
-      const phone = userDoc.data()?.phone;
-      if (phone && phone !== req.user.phone) sendBookingWhatsApp(phone, saved).catch(() => {});
+      const phone = userDoc.data()?.phone || saved.mpesaPhone;
+      if (phone) sendBookingWhatsApp(phone, saved).catch(() => {});
     }).catch(() => {});
 
     res.status(201).json(saved);
