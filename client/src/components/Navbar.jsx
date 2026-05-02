@@ -143,12 +143,6 @@ export default function Navbar() {
                       </div>
                       <span className="hidden xl:block">{user.name?.split(' ')[0] || t('myAccount')}</span>
                     </Link>
-                    {isAdmin && (
-                      <Link to="/admin/dashboard"
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-gold bg-gold/10 hover:bg-gold/20 border border-gold/20 transition-all uppercase tracking-widest">
-                        Admin
-                      </Link>
-                    )}
                     <button onClick={handleLogout}
                       className="px-3 py-1.5 rounded-lg text-sm text-cream/50 hover:text-cream hover:bg-white/5 transition-all">
                       {t('signOut')}
@@ -262,12 +256,6 @@ export default function Navbar() {
                   <div className="text-cream/40 text-xs truncate">{user.email}</div>
                 </div>
               </Link>
-              {isAdmin && (
-                <Link to="/admin/dashboard"
-                  className="block text-center py-2.5 rounded-xl text-xs font-bold text-gold bg-gold/10 border border-gold/20 uppercase tracking-widest transition-all hover:bg-gold/20">
-                  Admin Panel
-                </Link>
-              )}
               <button onClick={handleLogout}
                 className="w-full py-2.5 rounded-xl text-sm text-cream/50 hover:text-red-400 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20">
                 Sign Out
