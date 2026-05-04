@@ -87,10 +87,36 @@ async function sendCheckInReminderWhatsApp(phone, booking) {
   return sendWhatsApp(phone, msg);
 }
 
+async function sendOrderWhatsApp(phone, order) {
+  if (!phone) return;
+
+  const typeLabel = order.type === 'walkin' ? '🍴 Walk-in Order' :
+                    order.type === 'service' ? '🛎️ Service Request' : '🍽️ Room Service';
+
+  const itemsList = (order.items || [])
+    .map(i => `  • ${i.name}${i.qty > 1 ? ` × ${i.qty}` : ''}${i.price > 0 ? ` — KES ${(i.price * i.qty).toLocaleString()}` : ''}`)
+    .join('\n');
+
+  const msg =
+    `${typeLabel}\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `📍 *${order.roomNumber || 'Walk-in'}*\n` +
+    `👤 ${order.userName || 'Guest'}\n` +
+    `🕐 ${new Date(order.createdAt).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' })}\n\n` +
+    `*Items:*\n${itemsList}\n\n` +
+    (order.total > 0 ? `💰 *Total: KES ${order.total?.toLocaleString()}*\n` : '') +
+    (order.paymentMethod ? `💳 Payment: ${order.paymentMethod.toUpperCase()}\n` : '') +
+    (order.notes ? `\n💬 _${order.notes}_\n` : '') +
+    `\n_Ref: ${(order.id || '').slice(0, 8).toUpperCase() || 'NEW'}_`;
+
+  return sendWhatsApp(phone, msg);
+}
+
 module.exports = {
   sendWhatsApp,
   sendBookingWhatsApp,
   sendApprovalWhatsApp,
   sendPaymentReceiptWhatsApp,
   sendCheckInReminderWhatsApp,
+  sendOrderWhatsApp,
 };

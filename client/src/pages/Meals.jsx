@@ -471,12 +471,12 @@ export default function Meals() {
 
   const placeOrder = useMutation({
     mutationFn: ({ tableNo, notes, payMethod, mpesaPhone, total, cartItems }) =>
-      api.post('/orders', {
+      api.post('/orders/walkin', {
         items: cartItems.map(i => ({ mealId: i.id, name: i.name, price: i.price, qty: i.qty })),
+        tableNo: tableNo || 'Walk-in',
         roomNumber: tableNo || 'Walk-in',
-        notes: `[${payMethod.toUpperCase()}${mpesaPhone ? ' · ' + mpesaPhone : ''}] ${notes}`.trim(),
+        notes: `${notes}${mpesaPhone ? ` [M-Pesa: ${mpesaPhone}]` : ''}`.trim(),
         total,
-        type: 'walkin',
         paymentMethod: payMethod,
       }).catch(() => ({ data: { id: 'order-' + Date.now() } })),
     onSuccess: (_, vars) => {

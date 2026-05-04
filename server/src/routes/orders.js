@@ -1,13 +1,38 @@
+
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
 const { authenticate, isAdmin } = require('../middleware/auth');
 const { sendOrderNotification } = require('../services/email');
+const { sendOrderWhatsApp } = require('../services/whatsapp');
 
-// POST /api/orders — guest: place room service order or service request
+// ── Shared helper: save order + notify owner ──────────────────────────────────
+async function createOrder(orderData) {
+  const docRef = await db.collection('orders').add(orderData);
+  const saved = { id: docRef.id, ...orderData };
+
+  const ownerPhone = process.env.HOTEL_OWNER_PHONE || '0769113931';
+
+  // WhatsApp to hotel owner — non-blocking
+  sendOrderWhatsApp(ownerPhone, saved).catch(err =>
+    console.error('Order WhatsApp failed:', err.message)
+  );
+
+  // Email to admin — non-blocking
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
+  if (adminEmail) {
+    sendOrderNotification(adminEmail, saved).catch(err =>
+      console.error('Order email failed:', err.message)
+    );
+  }
+
+  return saved;
+}
+
+// ── POST /api/orders — authenticated: room service / service request ──────────
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { items, bookingId, roomNumber, notes, total, type } = req.body;
+    const { items, bookingId, roomNumber, notes, total, type, paymentMethod } = req.body;
     if (!items?.length) return res.status(400).json({ error: 'No items in order' });
 
     const order = {
@@ -20,61 +45,75 @@ router.post('/', authenticate, async (req, res) => {
       notes: notes || '',
       total: total || 0,
       type: type || 'food',
+      paymentMethod: paymentMethod || null,
       status: 'received',
       createdAt: new Date().toISOString(),
     };
 
-    const docRef = await db.collection('orders').add(order);
-    const savedOrder = { id: docRef.id, ...order };
-
-    // Notify admin via email (non-blocking)
-    const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
-    if (adminEmail) {
-      sendOrderNotification(adminEmail, savedOrder).catch(err =>
-        console.error('Order notification email failed:', err.message)
-      );
-    }
-
-    res.status(201).json(savedOrder);
+    const saved = await createOrder(order);
+    res.status(201).json(saved);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/orders — admin: all orders | guest: their own orders
+// ── POST /api/orders/walkin — public: walk-in restaurant order (no auth) ──────
+router.post('/walkin', async (req, res) => {
+  try {
+    const { items, roomNumber, notes, total, paymentMethod, tableNo } = req.body;
+    if (!items?.length) return res.status(400).json({ error: 'No items in order' });
+
+    const order = {
+      userId: 'walkin',
+      userEmail: 'walkin@azurahaven.com',
+      userName: 'Walk-in Guest',
+      items,
+      bookingId: null,
+      roomNumber: tableNo || roomNumber || 'Walk-in',
+      notes: notes || '',
+      total: total || 0,
+      type: 'walkin',
+      paymentMethod: paymentMethod || 'cash',
+      status: 'received',
+      createdAt: new Date().toISOString(),
+    };
+
+    const saved = await createOrder(order);
+    res.status(201).json(saved);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/orders — admin: all | guest: own orders ─────────────────────────
 router.get('/', authenticate, async (req, res) => {
   try {
     let snapshot;
     if (req.user.isAdmin) {
-      // Admin sees all orders
       snapshot = await db.collection('orders').orderBy('createdAt', 'desc').limit(200).get();
     } else {
-      // Guest sees only their own orders
       snapshot = await db.collection('orders')
         .where('userId', '==', req.user.uid)
         .orderBy('createdAt', 'desc')
         .limit(50)
         .get();
     }
-    const orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json({ orders });
+    res.json({ orders: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) });
   } catch (err) {
-    // Fallback without orderBy if index missing
+    // Fallback without orderBy if Firestore index missing
     try {
       const snapshot = await db.collection('orders').get();
       let orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (!req.user.isAdmin) {
-        orders = orders.filter(o => o.userId === req.user.uid);
-      }
+      if (!req.user.isAdmin) orders = orders.filter(o => o.userId === req.user.uid);
       orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       res.json({ orders: orders.slice(0, 100) });
-    } catch (fallbackErr) {
-      res.status(500).json({ error: fallbackErr.message });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
     }
   }
 });
 
-// GET /api/orders/mine — guest: their own orders (explicit endpoint)
+// ── GET /api/orders/mine — guest: own orders ──────────────────────────────────
 router.get('/mine', authenticate, async (req, res) => {
   try {
     const snapshot = await db.collection('orders')
@@ -82,27 +121,25 @@ router.get('/mine', authenticate, async (req, res) => {
       .orderBy('createdAt', 'desc')
       .limit(50)
       .get();
-    const orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    res.json({ orders });
+    res.json({ orders: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) });
   } catch (err) {
-    // Fallback without orderBy
     try {
       const snapshot = await db.collection('orders').where('userId', '==', req.user.uid).get();
       const orders = snapshot.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       res.json({ orders });
-    } catch (fallbackErr) {
-      res.status(500).json({ error: fallbackErr.message });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
     }
   }
 });
 
-// PATCH /api/orders/:id/status — admin: update order status + assignment
+// ── PATCH /api/orders/:id/status — admin: update status + assignment ──────────
 router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
   try {
     const { status, assignedTo, assignNote } = req.body;
-    const valid = ['received', 'preparing', 'on-the-way', 'delivered', 'completed', 'cancelled'];
+    const valid = ['received','preparing','on-the-way','delivered','completed','cancelled'];
     if (status && !valid.includes(status)) return res.status(400).json({ error: 'Invalid status' });
 
     const update = { updatedAt: new Date().toISOString() };
@@ -112,7 +149,23 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
 
     await db.collection('orders').doc(req.params.id).update(update);
     const doc = await db.collection('orders').doc(req.params.id).get();
-    res.json({ id: doc.id, ...doc.data() });
+    const updated = { id: doc.id, ...doc.data() };
+
+    // Notify owner when status changes to key milestones
+    if (['on-the-way','delivered','completed'].includes(status)) {
+      const ownerPhone = process.env.HOTEL_OWNER_PHONE || '0769113931';
+      const statusEmoji = status === 'on-the-way' ? '🚶' : status === 'delivered' ? '✅' : '🎉';
+      const { sendWhatsApp } = require('../services/whatsapp');
+      sendWhatsApp(ownerPhone,
+        `${statusEmoji} *Order Update*\n` +
+        `Room: *${updated.roomNumber}*\n` +
+        `Status: *${status.toUpperCase()}*\n` +
+        `${updated.assignedTo ? `Staff: ${updated.assignedTo}\n` : ''}` +
+        `Items: ${(updated.items || []).map(i => i.name).join(', ')}`
+      ).catch(() => {});
+    }
+
+    res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

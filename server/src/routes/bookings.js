@@ -140,11 +140,28 @@ router.post('/', authenticate, validate(bookingSchema), async (req, res) => {
     }
 
     // Send WhatsApp/SMS to guest's phone if available
-    const { sendBookingWhatsApp } = require('../services/whatsapp');
+    const { sendBookingWhatsApp, sendWhatsApp } = require('../services/whatsapp');
     db.collection('users').doc(req.user.uid).get().then(userDoc => {
       const phone = userDoc.data()?.phone || saved.mpesaPhone;
       if (phone) sendBookingWhatsApp(phone, saved).catch(() => {});
     }).catch(() => {});
+
+    // Notify hotel owner on every new booking
+    const ownerPhone = process.env.HOTEL_OWNER_PHONE || '0769113931';
+    sendWhatsApp(ownerPhone,
+      `🏨 *New Booking Received!*\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `👤 *${saved.userName}*\n` +
+      `📧 ${saved.userEmail}\n` +
+      `🛏️ Room: *${saved.roomName}*\n` +
+      `📅 Check-in: *${saved.checkIn}*\n` +
+      `📅 Check-out: *${saved.checkOut}*\n` +
+      `👥 Guests: ${saved.guests}\n` +
+      `💰 Total: *KES ${saved.totalPrice?.toLocaleString()}*\n` +
+      `💳 Payment: ${saved.paymentMethod || 'Pending'}\n` +
+      (saved.specialRequests ? `💬 Note: _${saved.specialRequests}_\n` : '') +
+      `\n_Ref: ${saved.id.slice(0, 8).toUpperCase()}_`
+    ).catch(() => {});
 
     res.status(201).json(saved);
   } catch (err) {
