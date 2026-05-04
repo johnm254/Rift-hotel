@@ -1,4 +1,8 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+// Force IPv4 DNS resolution globally
+dns.setDefaultResultOrder('ipv4first');
 
 // Lazy transporter — only creates if SMTP is configured
 let _transporter = null;
@@ -21,14 +25,11 @@ function getTransporter() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    // Force IPv4 — IPv6 not available on all cloud servers
     family: 4,
-    tls: {
-      rejectUnauthorized: false,
-    },
-    connectionTimeout: 10000,
+    tls: { rejectUnauthorized: false },
+    connectionTimeout: 15000,
     greetingTimeout: 10000,
-    socketTimeout: 15000,
+    socketTimeout: 20000,
   });
   return _transporter;
 }
