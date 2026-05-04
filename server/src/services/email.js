@@ -21,10 +21,10 @@ function getTransporter() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    // Required for Gmail on cloud servers
+    // Force IPv4 — IPv6 not available on all cloud servers
+    family: 4,
     tls: {
       rejectUnauthorized: false,
-      ciphers: 'SSLv3',
     },
     connectionTimeout: 10000,
     greetingTimeout: 10000,
