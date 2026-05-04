@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useMemo, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
@@ -7,6 +7,7 @@ import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { SkeletonGrid } from '../components/SkeletonCard';
 import { mockMeals } from '../lib/mockData';
+import { useDebounce } from '../lib/useDebounce';
 
 // ── Category icons ────────────────────────────────────────────────────────────
 const CAT_ICONS = {
@@ -444,7 +445,8 @@ export default function Meals() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [category, setCategory] = useState('');
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const search = useDebounce(searchInput, 300);
   const [cart, setCart] = useState({});
   const [showCart, setShowCart] = useState(false);
   const [confirmed, setConfirmed] = useState(null);
@@ -468,28 +470,32 @@ export default function Meals() {
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
   const cartTotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
 
-  let filtered = meals || [];
-  if (search) {
-    const q = search.toLowerCase();
-    filtered = filtered.filter(m =>
-      m.name?.toLowerCase().includes(q) ||
-      m.description?.toLowerCase().includes(q) ||
-      m.category?.toLowerCase().includes(q)
-    );
-  }
+  // Memoize filtered meals — only recomputes when debounced search changes
+  const filtered = useMemo(() => {
+    let list = meals || [];
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(m =>
+        m.name?.toLowerCase().includes(q) ||
+        m.description?.toLowerCase().includes(q) ||
+        m.category?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [meals, search]);
 
-  const addToCart = (meal) => {
+  const addToCart = useCallback((meal) => {
     setCart(prev => ({ ...prev, [meal.id]: { ...meal, qty: (prev[meal.id]?.qty || 0) + 1 } }));
     toast.success(`${meal.name} added`, { duration: 1500 });
-  };
+  }, []);
 
-  const removeFromCart = (id) => {
+  const removeFromCart = useCallback((id) => {
     setCart(prev => {
       const u = { ...prev };
       if (u[id].qty <= 1) delete u[id]; else u[id] = { ...u[id], qty: u[id].qty - 1 };
       return u;
     });
-  };
+  }, []);
 
   const placeOrder = useMutation({
     mutationFn: ({ tableNo, notes, payMethod, mpesaPhone, clientPhone, clientName, total, cartItems }) =>
@@ -612,7 +618,7 @@ export default function Meals() {
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <input type="text" placeholder="Search dishes..." value={search} onChange={e => setSearch(e.target.value)}
+            <input type="text" placeholder="Search dishes..." value={searchInput} onChange={e => setSearchInput(e.target.value)}
               className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors" />
           </div>
         </div>

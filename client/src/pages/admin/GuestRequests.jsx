@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import api from '../../lib/api';
 import Loading from '../../components/Loading';
+import { useDebounce } from '../../lib/useDebounce';
 
 const STATUS_COLORS = {
   received:   'bg-yellow-100 text-yellow-800',
@@ -21,7 +22,8 @@ const STAFF_ROLES = [
 export default function GuestRequests() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all');
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const search = useDebounce(searchInput, 300);
   const [assignModal, setAssignModal] = useState(null);
   const [assignee, setAssignee] = useState('');
   const [assignNote, setAssignNote] = useState('');
@@ -126,7 +128,7 @@ export default function GuestRequests() {
         <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
-        <input type="text" placeholder="Search by room, guest, or request..." value={search} onChange={e => setSearch(e.target.value)}
+        <input type="text" placeholder="Search by room, guest, or request..." value={searchInput} onChange={e => setSearchInput(e.target.value)}
           className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-cream-dark focus:border-gold focus:outline-none text-navy transition-colors" />
       </div>
 

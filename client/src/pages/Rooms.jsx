@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { SkeletonGrid } from '../components/SkeletonCard';
 import { useWishlist } from '../context/WishlistContext';
 import { mockRooms } from '../lib/mockData';
+import { useDebounce } from '../lib/useDebounce';
 
 const CAPACITY_OPTIONS = [
   { label: 'Any', value: 0 },
@@ -15,11 +16,17 @@ const CAPACITY_OPTIONS = [
 ];
 
 export default function Rooms() {
-  const [search, setSearch] = useState('');
+  // Raw input state — updates instantly so the input feels responsive
+  const [searchInput, setSearchInput] = useState('');
+  const [minPriceInput, setMinPriceInput] = useState('');
+  const [maxPriceInput, setMaxPriceInput] = useState('');
   const [sortBy, setSortBy] = useState('default');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
   const [capacityFilter, setCapacityFilter] = useState(0);
+
+  // Debounced values — used for actual filtering (300ms delay)
+  const search = useDebounce(searchInput, 300);
+  const minPrice = useDebounce(minPriceInput, 300);
+  const maxPrice = useDebounce(maxPriceInput, 300);
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ['rooms'],
@@ -30,30 +37,43 @@ export default function Rooms() {
     }).catch(() => mockRooms),
   });
 
-  let filtered = rooms || [];
+  // Memoize filtered list — only recomputes when debounced values change
+  const filtered = useMemo(() => {
+    let list = rooms || [];
 
-  if (search) {
-    const q = search.toLowerCase();
-    filtered = filtered.filter(r =>
-      r.name?.toLowerCase().includes(q) ||
-      r.description?.toLowerCase().includes(q) ||
-      r.amenities?.some(a => a.toLowerCase().includes(q))
-    );
-  }
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(r =>
+        r.name?.toLowerCase().includes(q) ||
+        r.description?.toLowerCase().includes(q) ||
+        r.amenities?.some(a => a.toLowerCase().includes(q))
+      );
+    }
 
-  if (minPrice) filtered = filtered.filter(r => r.price >= Number(minPrice));
-  if (maxPrice) filtered = filtered.filter(r => r.price <= Number(maxPrice));
+    if (minPrice) list = list.filter(r => r.price >= Number(minPrice));
+    if (maxPrice) list = list.filter(r => r.price <= Number(maxPrice));
 
-  if (capacityFilter === 2) filtered = filtered.filter(r => r.capacity <= 2);
-  else if (capacityFilter === 4) filtered = filtered.filter(r => r.capacity >= 3 && r.capacity <= 4);
-  else if (capacityFilter === 5) filtered = filtered.filter(r => r.capacity >= 5);
+    if (capacityFilter === 2) list = list.filter(r => r.capacity <= 2);
+    else if (capacityFilter === 4) list = list.filter(r => r.capacity >= 3 && r.capacity <= 4);
+    else if (capacityFilter === 5) list = list.filter(r => r.capacity >= 5);
 
-  if (sortBy === 'price-asc') filtered = [...filtered].sort((a, b) => a.price - b.price);
-  if (sortBy === 'price-desc') filtered = [...filtered].sort((a, b) => b.price - a.price);
-  if (sortBy === 'capacity') filtered = [...filtered].sort((a, b) => a.capacity - b.capacity);
+    if (sortBy === 'price-asc') list = [...list].sort((a, b) => a.price - b.price);
+    if (sortBy === 'price-desc') list = [...list].sort((a, b) => b.price - a.price);
+    if (sortBy === 'capacity') list = [...list].sort((a, b) => a.capacity - b.capacity);
 
-  const hasFilters = search || minPrice || maxPrice || capacityFilter || sortBy !== 'default';
-  const clearFilters = () => { setSearch(''); setMinPrice(''); setMaxPrice(''); setCapacityFilter(0); setSortBy('default'); };
+    return list;
+  }, [rooms, search, minPrice, maxPrice, capacityFilter, sortBy]);
+
+  const hasFilters = searchInput || minPriceInput || maxPriceInput || capacityFilter || sortBy !== 'default';
+
+  const clearFilters = useCallback(() => {
+    setSearchInput('');
+    setMinPriceInput('');
+    setMaxPriceInput('');
+    setCapacityFilter(0);
+    setSortBy('default');
+  }, []);
+
   const { toggle: toggleWishlist, isWishlisted } = useWishlist();
 
   return (
@@ -83,8 +103,8 @@ export default function Rooms() {
               <input
                 type="text"
                 placeholder="Search by name, description or amenity..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy transition-colors"
               />
             </div>
@@ -107,16 +127,16 @@ export default function Rooms() {
               <input
                 type="number"
                 placeholder="Min"
-                value={minPrice}
-                onChange={e => setMinPrice(e.target.value)}
+                value={minPriceInput}
+                onChange={e => setMinPriceInput(e.target.value)}
                 className="w-full sm:w-24 px-3 py-2 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors"
               />
               <span className="text-muted flex-shrink-0">—</span>
               <input
                 type="number"
                 placeholder="Max"
-                value={maxPrice}
-                onChange={e => setMaxPrice(e.target.value)}
+                value={maxPriceInput}
+                onChange={e => setMaxPriceInput(e.target.value)}
                 className="w-full sm:w-24 px-3 py-2 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors"
               />
             </div>

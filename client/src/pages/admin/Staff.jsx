@@ -1,9 +1,10 @@
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import api from '../../lib/api';
 import Loading from '../../components/Loading';
+import { useDebounce } from '../../lib/useDebounce';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DEPARTMENTS = [
@@ -296,7 +297,8 @@ export default function Staff() {
   const [view, setView] = useState('grid');           // 'grid' | 'dept'
   const [deptFilter, setDeptFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const search = useDebounce(searchInput, 300);
   const [showModal, setShowModal] = useState(false);
   const [editMember, setEditMember] = useState(null);
   const [showAssign, setShowAssign] = useState(false);
@@ -453,7 +455,7 @@ export default function Staff() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input type="text" placeholder="Search by name, role, department..."
-            value={search} onChange={e => setSearch(e.target.value)}
+            value={searchInput} onChange={e => setSearchInput(e.target.value)}
             className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-cream-dark focus:border-gold focus:outline-none text-navy transition-colors" />
         </div>
 
