@@ -3,43 +3,50 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
 const { authenticate, isAdmin } = require('../middleware/auth');
-const { sendOrderNotification, sendOrderReceiptEmail, sendOrderStatusEmail } = require('../services/email');
-const { sendNewOrderAlertToOwner, sendOrderReceiptToClient, sendOrderStatusToClient } = require('../services/twilio');
-// ── Shared helper: save order + notify owner + notify client ──────────────────
+const {
+  sendOrderNotification,
+  sendOrderReceiptEmail,
+  sendOrderStatusEmail,
+} = require('../services/email');
+
+// Twilio is optional — only used if configured
+function tryTwilio(fn) {
+  try {
+    const twilio = require('../services/twilio');
+    return fn(twilio);
+  } catch { /* Twilio not available */ }
+}
+
+// ── Shared: save order + email client + email admin ───────────────────────────
 async function createOrder(orderData) {
   const docRef = await db.collection('orders').add(orderData);
   const saved = { id: docRef.id, ...orderData };
 
-  const ownerPhone  = process.env.HOTEL_OWNER_PHONE || '0769113931';
-  const adminEmail  = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
 
-  // 1. Email receipt to client (authenticated users have userEmail)
+  // 1. Email receipt to client (signed-in users)
   const clientEmail = saved.userEmail && saved.userEmail !== 'walkin@azurahaven.com'
     ? saved.userEmail : null;
   if (clientEmail) {
     sendOrderReceiptEmail(clientEmail, saved).catch(err =>
-      console.error('Client order receipt email failed:', err.message)
+      console.error('Client receipt email failed:', err.message)
     );
   }
 
-  // 2. WhatsApp/SMS receipt to client via Twilio (if phone provided)
-  if (saved.clientPhone) {
-    sendOrderReceiptToClient(saved.clientPhone, saved).catch(err =>
-      console.error('Client Twilio receipt failed:', err.message)
-    );
-  }
-
-  // 3. Email to admin
+  // 2. Email alert to admin
   if (adminEmail) {
     sendOrderNotification(adminEmail, saved).catch(err =>
       console.error('Admin order email failed:', err.message)
     );
   }
 
-  // 4. WhatsApp/SMS alert to hotel owner via Twilio
-  sendNewOrderAlertToOwner(saved).catch(err =>
-    console.error('Owner Twilio alert failed:', err.message)
-  );
+  // 3. Twilio WhatsApp/SMS to client phone (if provided) — optional
+  if (saved.clientPhone) {
+    tryTwilio(t => t.sendOrderReceiptToClient(saved.clientPhone, saved).catch(() => {}));
+  }
+
+  // 4. Twilio WhatsApp/SMS alert to owner — optional
+  tryTwilio(t => t.sendNewOrderAlertToOwner(saved).catch(() => {}));
 
   return saved;
 }
@@ -50,12 +57,12 @@ router.post('/', authenticate, async (req, res) => {
     const { items, bookingId, roomNumber, notes, total, type, paymentMethod } = req.body;
     if (!items?.length) return res.status(400).json({ error: 'No items in order' });
 
-    // Look up client's phone from their user profile
+    // Look up client phone from user profile
     let clientPhone = null;
     try {
       const userDoc = await db.collection('users').doc(req.user.uid).get();
       clientPhone = userDoc.data()?.phone || null;
-    } catch { /* no phone on file — skip */ }
+    } catch { /* no phone — skip */ }
 
     const order = {
       userId: req.user.uid,
@@ -109,7 +116,7 @@ router.post('/walkin', async (req, res) => {
   }
 });
 
-// ── GET /api/orders — admin: all | guest: own orders ─────────────────────────
+// ── GET /api/orders — admin: all | guest: own ────────────────────────────────
 router.get('/', authenticate, async (req, res) => {
   try {
     let snapshot;
@@ -124,7 +131,6 @@ router.get('/', authenticate, async (req, res) => {
     }
     res.json({ orders: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) });
   } catch (err) {
-    // Fallback without orderBy if Firestore index missing
     try {
       const snapshot = await db.collection('orders').get();
       let orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -159,7 +165,7 @@ router.get('/mine', authenticate, async (req, res) => {
   }
 });
 
-// ── PATCH /api/orders/:id/status — admin: update status + assignment ──────────
+// ── PATCH /api/orders/:id/status — admin: update status + notify ──────────────
 router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
   try {
     const { status, assignedTo, assignNote } = req.body;
@@ -175,30 +181,23 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
     const doc = await db.collection('orders').doc(req.params.id).get();
     const updated = { id: doc.id, ...doc.data() };
 
-    const { sendWhatsApp, sendOrderStatusWhatsApp } = require('../services/whatsapp');
-    const { sendMail } = require('../services/email');
-    const ownerPhone = process.env.HOTEL_OWNER_PHONE || '0769113931';
-
-    // Notify owner on key milestones
-    if (['on-the-way','delivered','completed'].includes(status)) {
-      const statusEmoji = status === 'on-the-way' ? '🚶' : status === 'delivered' ? '✅' : '🎉';
-      sendWhatsApp(ownerPhone,
-        `${statusEmoji} *Order Update*\n` +
-        `Room: *${updated.roomNumber}*\n` +
-        `Status: *${status.toUpperCase()}*\n` +
-        `${updated.assignedTo ? `Staff: ${updated.assignedTo}\n` : ''}` +
-        `Items: ${(updated.items || []).map(i => i.name).join(', ')}`
-      ).catch(() => {});
-    }
-
-    // Notify client via WhatsApp/SMS (if phone on file)
-    if (updated.clientPhone) {
-      sendOrderStatusToClient(updated.clientPhone, updated, status).catch(() => {});
-    }
-
-    // Notify client via email
+    // Email status update to client
     if (updated.userEmail && updated.userEmail !== 'walkin@azurahaven.com') {
       sendOrderStatusEmail(updated.userEmail, updated, status).catch(() => {});
+    }
+
+    // Twilio WhatsApp/SMS to client phone — optional
+    if (updated.clientPhone) {
+      tryTwilio(t => t.sendOrderStatusToClient(updated.clientPhone, updated, status).catch(() => {}));
+    }
+
+    // Twilio alert to owner on key milestones — optional
+    if (['on-the-way','delivered','completed'].includes(status)) {
+      tryTwilio(t => t.notifyOwner(
+        `Order ${status.toUpperCase()} - ${updated.roomNumber}\n` +
+        `Items: ${(updated.items || []).map(i => i.name).join(', ')}\n` +
+        `${updated.assignedTo ? `Staff: ${updated.assignedTo}` : ''}`
+      ).catch(() => {}));
     }
 
     res.json(updated);
