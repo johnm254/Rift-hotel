@@ -3,35 +3,43 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
 const { authenticate, isAdmin } = require('../middleware/auth');
-const { sendOrderNotification } = require('../services/email');
+const { sendOrderNotification, sendOrderReceiptEmail, sendOrderStatusEmail } = require('../services/email');
 const { sendOrderWhatsApp, sendOrderReceiptWhatsApp, sendOrderStatusWhatsApp } = require('../services/whatsapp');
-
 // ── Shared helper: save order + notify owner + notify client ──────────────────
 async function createOrder(orderData) {
   const docRef = await db.collection('orders').add(orderData);
   const saved = { id: docRef.id, ...orderData };
 
-  const ownerPhone = process.env.HOTEL_OWNER_PHONE || '0769113931';
+  const ownerPhone  = process.env.HOTEL_OWNER_PHONE || '0769113931';
+  const adminEmail  = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
 
-  // 1. WhatsApp alert to hotel owner
+  // 1. Email receipt to client (authenticated users have userEmail)
+  const clientEmail = saved.userEmail && saved.userEmail !== 'walkin@azurahaven.com'
+    ? saved.userEmail : null;
+  if (clientEmail) {
+    sendOrderReceiptEmail(clientEmail, saved).catch(err =>
+      console.error('Client order receipt email failed:', err.message)
+    );
+  }
+
+  // 2. WhatsApp receipt to client (if phone provided — walk-ins or users with phone)
+  if (saved.clientPhone) {
+    sendOrderReceiptWhatsApp(saved.clientPhone, saved).catch(err =>
+      console.error('Client WhatsApp receipt failed:', err.message)
+    );
+  }
+
+  // 3. Email alert to admin
+  if (adminEmail) {
+    sendOrderNotification(adminEmail, saved).catch(err =>
+      console.error('Admin order email failed:', err.message)
+    );
+  }
+
+  // 4. WhatsApp alert to hotel owner
   sendOrderWhatsApp(ownerPhone, saved).catch(err =>
     console.error('Owner WhatsApp failed:', err.message)
   );
-
-  // 2. WhatsApp receipt to client (if phone provided)
-  if (saved.clientPhone) {
-    sendOrderReceiptWhatsApp(saved.clientPhone, saved).catch(err =>
-      console.error('Client WhatsApp failed:', err.message)
-    );
-  }
-
-  // 3. Email to admin
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
-  if (adminEmail) {
-    sendOrderNotification(adminEmail, saved).catch(err =>
-      console.error('Order email failed:', err.message)
-    );
-  }
 
   return saved;
 }
@@ -168,6 +176,7 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
     const updated = { id: doc.id, ...doc.data() };
 
     const { sendWhatsApp, sendOrderStatusWhatsApp } = require('../services/whatsapp');
+    const { sendMail } = require('../services/email');
     const ownerPhone = process.env.HOTEL_OWNER_PHONE || '0769113931';
 
     // Notify owner on key milestones
@@ -182,9 +191,35 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
       ).catch(() => {});
     }
 
-    // Notify client on every status change
+    // Notify client via WhatsApp (if phone on file)
     if (updated.clientPhone) {
       sendOrderStatusWhatsApp(updated.clientPhone, updated, status).catch(() => {});
+    }
+
+    // Notify client via email
+    if (updated.userEmail && updated.userEmail !== 'walkin@azurahaven.com') {
+      sendOrderStatusEmail(updated.userEmail, updated, status).catch(() => {});
+    }
+          to: clientEmail,
+          subject: `${sm.emoji} ${sm.text} — Azura Haven`,
+          html: `
+            <div style="font-family:'Georgia',serif;max-width:560px;margin:0 auto;background:#F5F1EB;border-radius:16px;overflow:hidden">
+              <div style="background:#1B2A4A;padding:24px;text-align:center">
+                <h1 style="color:#C9A96E;margin:0;font-size:22px">🏨 Azura Haven</h1>
+              </div>
+              <div style="padding:32px;text-align:center">
+                <div style="font-size:48px;margin-bottom:16px">${sm.emoji}</div>
+                <h2 style="color:#1B2A4A;margin:0 0 12px">${sm.text}</h2>
+                <p style="color:#6B7280;margin:0 0 20px">${sm.detail}</p>
+                <p style="color:#6B7280;font-size:13px">Order Ref: <strong>${updated.id?.slice(0,8).toUpperCase()}</strong></p>
+              </div>
+              <div style="background:#1B2A4A;padding:14px;text-align:center">
+                <p style="color:#C9A96E;margin:0;font-size:12px">Azura Haven · +254 769 113 931 · reservations@azurahaven.com</p>
+              </div>
+            </div>
+          `,
+        }).catch(() => {});
+      }
     }
 
     res.json(updated);
