@@ -4,7 +4,7 @@ const router = express.Router();
 const { db } = require('../config/firebase');
 const { authenticate, isAdmin } = require('../middleware/auth');
 const { sendOrderNotification, sendOrderReceiptEmail, sendOrderStatusEmail } = require('../services/email');
-const { sendOrderWhatsApp, sendOrderReceiptWhatsApp, sendOrderStatusWhatsApp } = require('../services/whatsapp');
+const { sendNewOrderAlertToOwner, sendOrderReceiptToClient, sendOrderStatusToClient } = require('../services/twilio');
 // ── Shared helper: save order + notify owner + notify client ──────────────────
 async function createOrder(orderData) {
   const docRef = await db.collection('orders').add(orderData);
@@ -22,23 +22,23 @@ async function createOrder(orderData) {
     );
   }
 
-  // 2. WhatsApp receipt to client (if phone provided — walk-ins or users with phone)
+  // 2. WhatsApp/SMS receipt to client via Twilio (if phone provided)
   if (saved.clientPhone) {
-    sendOrderReceiptWhatsApp(saved.clientPhone, saved).catch(err =>
-      console.error('Client WhatsApp receipt failed:', err.message)
+    sendOrderReceiptToClient(saved.clientPhone, saved).catch(err =>
+      console.error('Client Twilio receipt failed:', err.message)
     );
   }
 
-  // 3. Email alert to admin
+  // 3. Email to admin
   if (adminEmail) {
     sendOrderNotification(adminEmail, saved).catch(err =>
       console.error('Admin order email failed:', err.message)
     );
   }
 
-  // 4. WhatsApp alert to hotel owner
-  sendOrderWhatsApp(ownerPhone, saved).catch(err =>
-    console.error('Owner WhatsApp failed:', err.message)
+  // 4. WhatsApp/SMS alert to hotel owner via Twilio
+  sendNewOrderAlertToOwner(saved).catch(err =>
+    console.error('Owner Twilio alert failed:', err.message)
   );
 
   return saved;
@@ -191,9 +191,9 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
       ).catch(() => {});
     }
 
-    // Notify client via WhatsApp (if phone on file)
+    // Notify client via WhatsApp/SMS (if phone on file)
     if (updated.clientPhone) {
-      sendOrderStatusWhatsApp(updated.clientPhone, updated, status).catch(() => {});
+      sendOrderStatusToClient(updated.clientPhone, updated, status).catch(() => {});
     }
 
     // Notify client via email
