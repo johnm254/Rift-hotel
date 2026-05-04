@@ -159,26 +159,46 @@ export default function Home() {
       {/* ===== FEATURED DINING ===== */}
       <section className="bg-white py-12 sm:py-20">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <span className="text-gold text-sm uppercase tracking-widest font-semibold">Culinary</span>
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-navy mt-2 mb-4">
-              Exquisite Dining
-            </h2>
-            <p className="text-muted max-w-md mx-auto">
-              Savor gourmet cuisine crafted by world-class chefs using the finest local ingredients.
-            </p>
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+            <div>
+              <span className="text-gold text-sm uppercase tracking-widest font-semibold">The Azura Restaurant</span>
+              <h2 className="text-3xl md:text-4xl font-serif font-bold text-navy mt-2 mb-3">
+                Exquisite Dining
+              </h2>
+              <p className="text-muted max-w-md">
+                Open to everyone — hotel guests and walk-in visitors alike. Dine in, take away, or order to your room.
+              </p>
+            </div>
+            {/* Two CTAs */}
+            <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+              <Link to="/meals"
+                className="flex items-center justify-center gap-2 bg-gold hover:bg-gold-light text-navy font-bold px-5 py-3 rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg shadow-gold/20">
+                🍽️ Order Now
+              </Link>
+              <Link to="/meals"
+                className="flex items-center justify-center gap-2 border-2 border-navy text-navy hover:bg-navy hover:text-cream font-semibold px-5 py-3 rounded-xl text-sm uppercase tracking-widest transition-all">
+                Full Menu →
+              </Link>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Walk-in info strip */}
+          <div className="bg-cream rounded-2xl p-4 mb-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-4 sm:gap-6 text-sm text-navy">
+              <span className="flex items-center gap-1.5">🕐 <strong>6:30 AM – 11:00 PM</strong></span>
+              <span className="flex items-center gap-1.5">🪑 <strong>Indoor & Poolside</strong></span>
+              <span className="flex items-center gap-1.5">🚗 <strong>Takeaway Available</strong></span>
+              <span className="flex items-center gap-1.5">🛎️ <strong>Room Service</strong></span>
+            </div>
+            <span className="text-xs text-muted bg-white border border-cream-dark px-3 py-1.5 rounded-full whitespace-nowrap">
+              No reservation needed
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {(meals || []).slice(0, 3).map(meal => (
               <MealCard key={meal.id} meal={meal} />
             ))}
-          </div>
-
-          <div className="text-center mt-10">
-            <Link to="/meals" className="inline-block border-2 border-navy text-navy hover:bg-navy hover:text-cream font-semibold px-8 py-3 rounded-lg text-sm uppercase tracking-widest transition-all">
-              Full Menu
-            </Link>
           </div>
         </div>
       </section>
@@ -302,28 +322,27 @@ function RoomCard({ room }) {
 
 function MealCard({ meal }) {
   return (
-    <div className="group bg-cream rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-      <div className="h-48 overflow-hidden">
-        <img 
-          src={meal.photo || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600'} 
+    <Link to="/meals" className="group block bg-cream rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+      <div className="h-48 overflow-hidden relative">
+        <img
+          src={meal.photo || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600'}
           alt={meal.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
+        <div className="absolute top-3 left-3">
+          <span className="bg-navy/80 backdrop-blur text-cream text-xs px-2.5 py-1 rounded-full capitalize font-medium">
+            {meal.category}
+          </span>
+        </div>
       </div>
       <div className="p-5">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="font-serif text-lg font-bold text-navy">{meal.name}</h3>
-          <span className="text-gold font-bold text-sm">KES {meal.price?.toLocaleString()}</span>
+          <h3 className="font-serif text-lg font-bold text-navy group-hover:text-gold-dark transition-colors">{meal.name}</h3>
+          <span className="text-gold font-bold text-sm flex-shrink-0 ml-2">KES {meal.price?.toLocaleString()}</span>
         </div>
-        <p className="text-muted text-sm line-clamp-2">{meal.description}</p>
-        {meal.dietary?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {meal.dietary.map(d => (
-              <span key={d} className="bg-cream-dark text-navy/60 text-xs px-2 py-1 rounded-full">{d}</span>
-            ))}
-          </div>
-        )}
+        <p className="text-muted text-sm line-clamp-2 mb-3">{meal.description}</p>
+        <span className="text-gold text-xs font-semibold group-hover:underline">Order Now →</span>
       </div>
-    </div>
+    </Link>
   );
 }

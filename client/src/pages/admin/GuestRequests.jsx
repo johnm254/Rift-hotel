@@ -83,6 +83,7 @@ export default function GuestRequests() {
   };
 
   const isServiceRequest = (order) => order.type === 'service' || order.total === 0;
+  const isWalkIn = (order) => order.type === 'walkin';
 
   if (isLoading) return <Loading />;
 
@@ -142,9 +143,9 @@ export default function GuestRequests() {
               <div className="flex-1">
                 {/* Header */}
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className="text-lg">{isServiceRequest(order) ? '🛎️' : '🍽️'}</span>
+                  <span className="text-lg">{isServiceRequest(order) ? '🛎️' : isWalkIn(order) ? '🍴' : '🍽️'}</span>
                   <h3 className="font-bold text-navy">
-                    {isServiceRequest(order) ? 'Service Request' : 'Room Service Order'}
+                    {isServiceRequest(order) ? 'Service Request' : isWalkIn(order) ? 'Walk-in Order' : 'Room Service Order'}
                   </h3>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full uppercase ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-700'}`}>
                     {order.status}

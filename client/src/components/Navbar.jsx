@@ -218,10 +218,11 @@ export default function Navbar() {
 
           {/* Extra links */}
           {[
-            ['/order', t('roomService')],
-            ['/transfer', 'Airport Transfer'],
-            ['/wishlist', `Wishlist${wishlist.length > 0 ? ` (${wishlist.length})` : ''}`],
-            ['/faq', 'FAQ'],
+            ['/meals', '🍽️ Restaurant (Walk-in)'],
+            ['/order', '🛎️ Room Service'],
+            ['/transfer', '🚗 Airport Transfer'],
+            ['/wishlist', `❤️ Wishlist${wishlist.length > 0 ? ` (${wishlist.length})` : ''}`],
+            ['/faq', '❓ FAQ'],
           ].map(([to, label]) => (
             <Link key={to} to={to}
               className={`flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${
