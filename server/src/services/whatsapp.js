@@ -51,7 +51,7 @@ async function sendBookingWhatsApp(phone, booking) {
     `Guests: *${booking.guests}*\n` +
     `Total: *KES ${booking.totalPrice?.toLocaleString()}*\n\n` +
     `Ref: ${booking.id?.slice(0, 8).toUpperCase()}\n\n` +
-    `Need help? Reply to this message or call +254 700 000 000`;
+    `Need help? Reply to this message or call +254 769 113 931`;
   return sendWhatsApp(phone, msg);
 }
 
@@ -72,7 +72,7 @@ async function sendPaymentReceiptWhatsApp(phone, amount, method, bookingId) {
     `💳 Method: *${method}*\n` +
     `📋 Ref: *${bookingId?.slice(0, 8).toUpperCase() || 'N/A'}*\n\n` +
     `Your booking is confirmed. We look forward to welcoming you! 🏨\n\n` +
-    `Questions? Call us: +254 700 000 000`;
+    `Questions? Call us: +254 769 113 931`;
   return sendWhatsApp(phone, msg);
 }
 
@@ -82,7 +82,7 @@ async function sendCheckInReminderWhatsApp(phone, booking) {
     `Hi! Your check-in for *${booking.roomName}* is tomorrow *${booking.checkIn}*.\n\n` +
     `🕑 Check-in from 2:00 PM\n` +
     `📍 Westlands, Nairobi\n` +
-    `📞 +254 700 000 000\n\n` +
+    `📞 +254 769 113 931\n\n` +
     `Show your QR code at reception for express check-in. See you soon! 🏨`;
   return sendWhatsApp(phone, msg);
 }

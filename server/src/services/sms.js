@@ -60,7 +60,7 @@ async function sendSMS(to, message) {
 
 async function sendBookingSMS(phone, booking) {
   if (!phone) return;
-  const msg = `Azura Haven: Booking confirmed! Room: ${booking.roomName}. Check-in: ${booking.checkIn}. Ref: ${booking.id?.slice(0, 8).toUpperCase()}. Call +254700000000 for help.`;
+  const msg = `Azura Haven: Booking confirmed! Room: ${booking.roomName}. Check-in: ${booking.checkIn}. Ref: ${booking.id?.slice(0, 8).toUpperCase()}. Call +254769113931 for help.`;
   return sendSMS(phone, msg);
 }
 

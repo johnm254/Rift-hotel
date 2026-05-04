@@ -13,7 +13,7 @@ const faqs = [
   {
     category: 'Reservations & Cancellations',
     items: [
-      { q: 'How do I make a reservation?', a: 'You can book directly through our website by browsing rooms and clicking "Book This Room". You can also call us at +254 700 000 000 or email reservations@azurahaven.com. Direct bookings always get the best rate.' },
+      { q: 'How do I make a reservation?', a: 'You can book directly through our website by browsing rooms and clicking "Book This Room". You can also call us at +254 769 113 931 or email reservations@azurahaven.com. Direct bookings always get the best rate.' },
       { q: 'What is your cancellation policy?', a: 'Cancellations made 48 hours or more before check-in receive a full refund. Cancellations within 48 hours are charged one night\'s stay. No-shows are charged the full booking amount. Special packages may have different terms — check your booking confirmation.' },
       { q: 'Can I modify my booking after confirmation?', a: 'Yes, date changes and room upgrades can be made up to 24 hours before check-in, subject to availability. Contact our reservations team and we\'ll do our best to accommodate your request.' },
       { q: 'Do you require a deposit?', a: 'For standard bookings, no deposit is required — you pay at check-in. For special packages, events, and bookings of 5+ nights, a 30% deposit is required to secure the reservation.' },
@@ -143,7 +143,7 @@ export default function FAQ() {
             <Link to="/contact" className="bg-gold hover:bg-gold-light text-navy font-bold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all">
               Contact Us
             </Link>
-            <a href="https://wa.me/254700000000" target="_blank" rel="noopener noreferrer"
+            <a href="https://wa.me/254769113931" target="_blank" rel="noopener noreferrer"
               className="bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all">
               WhatsApp
             </a>

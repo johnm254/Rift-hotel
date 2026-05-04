@@ -10,7 +10,7 @@ const DEFAULT_PROPERTY = {
   name: 'Azura Haven',
   location: 'Westlands, Nairobi',
   description: 'Kenya\'s premier luxury hotel',
-  phone: '+254 700 000 000',
+  phone: '+254 769 113 931',
   email: 'reservations@azurahaven.com',
 };
 

@@ -21,8 +21,8 @@ export default function LiveChat() {
     if (m.includes('pool')) return 'Our heated infinity pool is open 6 AM – 10 PM daily.';
     if (m.includes('spa')) return 'The Azura Wellness Spa is open 8 AM – 8 PM. Advance booking recommended.';
     if (m.includes('cancel')) return 'Cancellations 48+ hours before check-in receive a full refund. See our FAQ for full policy.';
-    if (m.includes('staff') || m.includes('human') || m.includes('agent')) return 'Connecting you to our team via WhatsApp! Click: https://wa.me/254700000000';
-    return 'Thanks for your message! For immediate assistance, call us at +254 700 000 000 or WhatsApp us. Our team is available 24/7.';
+    if (m.includes('staff') || m.includes('human') || m.includes('agent')) return 'Connecting you to our team via WhatsApp! Click: https://wa.me/254769113931';
+    return 'Thanks for your message! For immediate assistance, call us at +254 769 113 931 or WhatsApp us. Our team is available 24/7.';
   };
 
   const send = (text) => {

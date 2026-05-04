@@ -64,7 +64,7 @@ function generateInvoiceHTML(booking, user) {
     </table>
   </div>
   <div class="total-row"><div><div class="total-label">Total Amount</div><div style="font-size:12px;color:#888;margin-top:4px">Status: <span class="status-badge">${booking.paymentStatus || 'pending'}</span></div></div><div class="total-amount">KES ${booking.totalPrice?.toLocaleString()}</div></div>
-  <div class="footer">Azura Haven Hotel &amp; Resort · P.O. Box 12345, Nairobi, Kenya<br>reservations@azurahaven.com · +254 700 000 000 · www.azurahaven.com<br><em>Thank you for choosing Azura Haven. We look forward to welcoming you again.</em></div>
+  <div class="footer">Azura Haven Hotel &amp; Resort · P.O. Box 12345, Nairobi, Kenya<br>reservations@azurahaven.com · +254 769 113 931 · www.azurahaven.com<br><em>Thank you for choosing Azura Haven. We look forward to welcoming you again.</em></div>
   </body></html>`;
 }
 

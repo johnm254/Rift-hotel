@@ -37,7 +37,7 @@ export default function Contact() {
               <div className="space-y-5">
                 {[
                   { icon: '📍', label: 'Address', value: 'Azura Haven Hotel\nWestlands, Nairobi\nKenya' },
-                  { icon: '📞', label: 'Phone', value: '+254 700 000 000\n+254 711 000 000' },
+                  { icon: '📞', label: 'Phone', value: '+254 769 113 931' },
                   { icon: '✉️', label: 'Email', value: 'reservations@azurahaven.com\ninfo@azurahaven.com' },
                   { icon: '🕐', label: 'Front Desk', value: 'Open 24 hours, 7 days a week' },
                 ].map(item => (
@@ -54,7 +54,7 @@ export default function Contact() {
 
             {/* WhatsApp */}
             <a
-              href="https://wa.me/254700000000?text=Hello%20Azura%20Haven%2C%20I%20would%20like%20to%20make%20an%20enquiry."
+              href="https://wa.me/254769113931?text=Hello%20Azura%20Haven%2C%20I%20would%20like%20to%20make%20an%20enquiry."
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 bg-green-500 hover:bg-green-600 text-white font-semibold px-5 py-3 rounded-xl transition-all w-full justify-center"
