@@ -243,6 +243,23 @@ export default function Profile() {
               {upcomingBookings.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-muted uppercase tracking-widest mb-3">Upcoming</h3>
+                  {/* Show Room Portal button if currently checked in */}
+                  {upcomingBookings.some(b => {
+                    const today = new Date().toISOString().split('T')[0];
+                    return b.status === 'approved' && b.checkIn <= today && b.checkOut >= today;
+                  }) && (
+                    <a href="/my-room"
+                      className="flex items-center gap-3 bg-navy text-cream rounded-2xl p-4 mb-3 hover:bg-navy-light transition-all group">
+                      <div className="w-10 h-10 rounded-xl bg-gold/20 flex items-center justify-center text-xl flex-shrink-0">🏨</div>
+                      <div className="flex-1">
+                        <div className="font-bold text-gold text-sm">You're checked in!</div>
+                        <div className="text-cream/60 text-xs">Order food, request services, chat with staff</div>
+                      </div>
+                      <svg className="w-5 h-5 text-gold group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </a>
+                  )}
                   <div className="space-y-3">
                     {upcomingBookings.map(b => <BookingCard key={b.id} b={b} user={user} onCancel={() => cancelBooking.mutate(b.id)} />)}
                   </div>

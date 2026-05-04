@@ -31,6 +31,7 @@ import NotFound from './pages/NotFound';
 
 import AirportTransfer from './pages/AirportTransfer';
 import Survey from './pages/Survey';
+import RoomPortal from './pages/RoomPortal';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminRooms from './pages/admin/Rooms';
 import AdminMeals from './pages/admin/Meals';
@@ -112,6 +113,7 @@ function AppContent() {
             <Route path="/register" element={<Register />} />
             <Route path="/booking/:roomId" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
             <Route path="/survey" element={<Survey />} />
+            <Route path="/my-room" element={<ProtectedRoute><RoomPortal /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
