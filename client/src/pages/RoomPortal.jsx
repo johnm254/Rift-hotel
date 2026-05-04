@@ -7,12 +7,34 @@ import { useAuth } from '../context/AuthContext';
 import Loading from '../components/Loading';
 import { mockMeals } from '../lib/mockData';
 
+// ── Order Status Badge ────────────────────────────────────────────────────────
+const ORDER_STATUS = {
+  received:     { label: 'Order Received',   color: 'bg-yellow-100 text-yellow-800', icon: '🔔' },
+  preparing:    { label: 'Being Prepared',   color: 'bg-blue-100 text-blue-800',    icon: '👨‍🍳' },
+  'on-the-way': { label: 'On the Way',       color: 'bg-purple-100 text-purple-800', icon: '🚶' },
+  delivered:    { label: 'Delivered',        color: 'bg-green-100 text-green-800',  icon: '✅' },
+  completed:    { label: 'Completed',        color: 'bg-green-100 text-green-800',  icon: '✅' },
+  cancelled:    { label: 'Cancelled',        color: 'bg-red-100 text-red-800',      icon: '❌' },
+};
+
 // ── Room Service Request ──────────────────────────────────────────────────────
 function RoomServiceTab({ booking }) {
   const [cart, setCart] = useState({});
   const [notes, setNotes] = useState('');
   const [category, setCategory] = useState('');
   const [ordered, setOrdered] = useState(null);
+  const queryClient = useQueryClient();
+
+  // Live order tracking
+  const { data: ordersData } = useQuery({
+    queryKey: ['myOrders', booking.id],
+    queryFn: () => api.get('/orders/mine').then(r => {
+      const d = r.data;
+      return (Array.isArray(d) ? d : (d.orders || []))
+        .filter(o => o.bookingId === booking.id && o.type !== 'service');
+    }).catch(() => []),
+    refetchInterval: 15000, // poll every 15s for status updates
+  });
 
   const { data: meals = [] } = useQuery({
     queryKey: ['meals', category],
@@ -37,11 +59,13 @@ function RoomServiceTab({ booking }) {
       roomNumber: booking.roomName,
       notes,
       total,
+      type: 'food',
     }).catch(() => ({ data: { id: 'order-' + Date.now() } })),
     onSuccess: (res) => {
       setOrdered(res.data);
       setCart({});
       setNotes('');
+      queryClient.invalidateQueries(['myOrders', booking.id]);
       toast.success('Order placed! Delivery in 30-45 minutes 🍽️');
     },
   });
@@ -54,14 +78,34 @@ function RoomServiceTab({ booking }) {
   });
 
   if (ordered) return (
-    <div className="text-center py-10">
-      <div className="text-5xl mb-4">🎉</div>
-      <h3 className="text-xl font-serif font-bold text-navy mb-2">Order Placed!</h3>
-      <p className="text-muted mb-1">Your meal will arrive in <strong>30–45 minutes</strong></p>
-      <p className="text-gold font-bold text-lg">KES {ordered.total?.toLocaleString() || total.toLocaleString()}</p>
-      <button onClick={() => setOrdered(null)} className="mt-4 bg-gold hover:bg-gold-light text-navy font-bold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all">
-        Order More
-      </button>
+    <div className="space-y-4">
+      <div className="text-center py-6">
+        <div className="text-5xl mb-4">🎉</div>
+        <h3 className="text-xl font-serif font-bold text-navy mb-2">Order Placed!</h3>
+        <p className="text-muted mb-1">Your meal will arrive in <strong>30–45 minutes</strong></p>
+        <p className="text-gold font-bold text-lg">KES {ordered.total?.toLocaleString() || total.toLocaleString()}</p>
+        <button onClick={() => setOrdered(null)} className="mt-4 bg-gold hover:bg-gold-light text-navy font-bold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all">
+          Order More
+        </button>
+      </div>
+      {/* Live order tracking */}
+      {(ordersData || []).length > 0 && (
+        <div className="space-y-2">
+          <h4 className="font-semibold text-navy text-sm">Your Orders</h4>
+          {(ordersData || []).slice(0, 5).map(order => {
+            const s = ORDER_STATUS[order.status] || ORDER_STATUS.received;
+            return (
+              <div key={order.id} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${s.color.includes('green') ? 'border-green-200' : s.color.includes('blue') ? 'border-blue-200' : s.color.includes('purple') ? 'border-purple-200' : 'border-yellow-200'}`}>
+                <div>
+                  <div className="text-sm font-medium text-navy">{order.items?.[0]?.name}{order.items?.length > 1 ? ` +${order.items.length - 1} more` : ''}</div>
+                  {order.assignedTo && <div className="text-xs text-muted">👤 {order.assignedTo}</div>}
+                </div>
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${s.color}`}>{s.icon} {s.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 
@@ -151,6 +195,18 @@ function ServicesTab({ booking }) {
   const [message, setMessage] = useState('');
   const [time, setTime] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Track service requests
+  const { data: serviceOrders = [] } = useQuery({
+    queryKey: ['myServiceOrders', booking.id],
+    queryFn: () => api.get('/orders/mine').then(r => {
+      const d = r.data;
+      return (Array.isArray(d) ? d : (d.orders || []))
+        .filter(o => o.bookingId === booking.id && o.type === 'service');
+    }).catch(() => []),
+    refetchInterval: 20000,
+  });
 
   const submitRequest = useMutation({
     mutationFn: () => api.post('/orders', {
@@ -163,19 +219,40 @@ function ServicesTab({ booking }) {
     }).catch(() => ({ data: { ok: true } })),
     onSuccess: () => {
       setSubmitted(true);
+      queryClient.invalidateQueries(['myServiceOrders', booking.id]);
       toast.success(`${selected.label} request sent! We'll be with you shortly.`);
     },
   });
 
   if (submitted) return (
-    <div className="text-center py-10">
-      <div className="text-5xl mb-4">✅</div>
-      <h3 className="text-xl font-serif font-bold text-navy mb-2">Request Sent!</h3>
-      <p className="text-muted mb-4">Our team will attend to your <strong>{selected?.label}</strong> request shortly.</p>
-      <button onClick={() => { setSubmitted(false); setSelected(null); setMessage(''); setTime(''); }}
-        className="bg-gold hover:bg-gold-light text-navy font-bold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all">
-        New Request
-      </button>
+    <div className="space-y-4">
+      <div className="text-center py-6">
+        <div className="text-5xl mb-4">✅</div>
+        <h3 className="text-xl font-serif font-bold text-navy mb-2">Request Sent!</h3>
+        <p className="text-muted mb-4">Our team will attend to your <strong>{selected?.label}</strong> request shortly.</p>
+        <button onClick={() => { setSubmitted(false); setSelected(null); setMessage(''); setTime(''); }}
+          className="bg-gold hover:bg-gold-light text-navy font-bold px-6 py-3 rounded-xl text-sm uppercase tracking-widest transition-all">
+          New Request
+        </button>
+      </div>
+      {/* Active service requests */}
+      {serviceOrders.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="font-semibold text-navy text-sm">Active Requests</h4>
+          {serviceOrders.slice(0, 5).map(order => {
+            const s = ORDER_STATUS[order.status] || ORDER_STATUS.received;
+            return (
+              <div key={order.id} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${s.color.includes('green') ? 'border-green-200' : s.color.includes('blue') ? 'border-blue-200' : 'border-yellow-200'}`}>
+                <div>
+                  <div className="text-sm font-medium text-navy">{order.items?.[0]?.name}</div>
+                  {order.assignedTo && <div className="text-xs text-muted">👤 Assigned to {order.assignedTo}</div>}
+                </div>
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${s.color}`}>{s.icon} {s.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 
@@ -214,15 +291,35 @@ function ServicesTab({ booking }) {
   );
 
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {SERVICE_TYPES.map(s => (
-        <button key={s.id} onClick={() => setSelected(s)}
-          className="bg-white rounded-2xl border border-cream-dark p-4 text-left hover:border-gold hover:shadow-md transition-all group">
-          <div className="text-2xl mb-2">{s.icon}</div>
-          <div className="font-semibold text-navy text-sm group-hover:text-gold transition-colors">{s.label}</div>
-          <div className="text-muted text-xs mt-0.5 line-clamp-2">{s.desc}</div>
-        </button>
-      ))}
+    <div className="space-y-4">
+      {/* Active requests tracker */}
+      {serviceOrders.filter(o => !['delivered','completed','cancelled'].includes(o.status)).length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
+          <h4 className="font-semibold text-navy text-sm flex items-center gap-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+            Active Requests
+          </h4>
+          {serviceOrders.filter(o => !['delivered','completed','cancelled'].includes(o.status)).map(order => {
+            const s = ORDER_STATUS[order.status] || ORDER_STATUS.received;
+            return (
+              <div key={order.id} className="flex items-center justify-between">
+                <span className="text-sm text-navy">{order.items?.[0]?.name}</span>
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${s.color}`}>{s.icon} {s.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        {SERVICE_TYPES.map(s => (
+          <button key={s.id} onClick={() => setSelected(s)}
+            className="bg-white rounded-2xl border border-cream-dark p-4 text-left hover:border-gold hover:shadow-md transition-all group">
+            <div className="text-2xl mb-2">{s.icon}</div>
+            <div className="font-semibold text-navy text-sm group-hover:text-gold transition-colors">{s.label}</div>
+            <div className="text-muted text-xs mt-0.5 line-clamp-2">{s.desc}</div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

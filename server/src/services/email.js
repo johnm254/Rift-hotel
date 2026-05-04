@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 const dns = require('dns');
 
-// Force IPv4 DNS resolution globally
+// Force IPv4 DNS resolution globally (fixes Render IPv6 ENETUNREACH)
 dns.setDefaultResultOrder('ipv4first');
 
 // Lazy transporter — only creates if SMTP is configured
@@ -15,22 +15,27 @@ function getTransporter() {
   }
 
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = parseInt(process.env.SMTP_PORT) || 587;
+  // Default to port 465 (SSL) for Gmail — more reliable on cloud hosts
+  const port = parseInt(process.env.SMTP_PORT) || 465;
+  const secure = port === 465 ? true : (process.env.SMTP_SECURE === 'true');
 
   _transporter = nodemailer.createTransport({
     host,
     port,
-    secure: port === 465,
+    secure,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    // Force IPv4 socket (prevents ENETUNREACH on IPv6-only hosts)
     family: 4,
     tls: { rejectUnauthorized: false },
-    connectionTimeout: 15000,
-    greetingTimeout: 10000,
-    socketTimeout: 20000,
+    connectionTimeout: 20000,
+    greetingTimeout: 15000,
+    socketTimeout: 25000,
   });
+
+  console.log(`📧 SMTP configured: ${host}:${port} (secure=${secure}) as ${process.env.SMTP_USER}`);
   return _transporter;
 }
 
@@ -93,7 +98,7 @@ async function sendBookingConfirmation(to, booking) {
             </div>
           </div>
           ${booking.specialRequests ? `<p style="color:#6B7280;font-style:italic;background:white;border-radius:12px;padding:16px;margin:0 0 16px">💬 Special request: ${booking.specialRequests}</p>` : ''}
-          ${!isOwner ? `<p style="color:#6B7280;font-size:13px;margin:0">Check-in from 2:00 PM · Check-out by 11:00 AM<br>Questions? Call us: <strong>+254 700 000 000</strong></p>` : ''}
+          ${!isOwner ? `<p style="color:#6B7280;font-size:13px;margin:0">Check-in from 2:00 PM · Check-out by 11:00 AM<br>Questions? Call us: <strong>+254 769 113 931</strong></p>` : ''}
         </div>
         <div style="background:#1B2A4A;padding:16px;text-align:center">
           <p style="color:#C9A96E;margin:0;font-size:12px">Azura Haven · Nairobi, Kenya · reservations@azurahaven.com</p>
@@ -120,7 +125,10 @@ async function sendStatusUpdate(to, booking, newStatus) {
           <div style="font-size:48px;margin-bottom:16px">${statusEmoji}</div>
           <h2 style="color:#1B2A4A;margin:0 0 8px">Booking ${statusText}</h2>
           <p style="color:#6B7280;margin:0 0 24px">Your booking for <strong style="color:#1B2A4A">${booking.roomName}</strong> (${booking.checkIn} → ${booking.checkOut}) has been <span style="color:${statusColor};font-weight:700">${statusText.toLowerCase()}</span>.</p>
-          ${newStatus === 'approved' ? `<p style="color:#6B7280;margin:0">We look forward to hosting you! See you on ${booking.checkIn}.</p>` : `<p style="color:#6B7280;margin:0">Please browse other available rooms or contact us for assistance.</p>`}
+          ${newStatus === 'approved'
+            ? `<p style="color:#6B7280;margin:0">We look forward to hosting you! See you on ${booking.checkIn}.</p>`
+            : `<p style="color:#6B7280;margin:0">Please browse other available rooms or contact us for assistance.</p>`
+          }
         </div>
         <div style="background:#1B2A4A;padding:16px;text-align:center">
           <p style="color:#C9A96E;margin:0;font-size:12px">Nairobi, Kenya · reservations@azurahaven.com</p>
@@ -143,7 +151,7 @@ async function sendWelcomeEmail(to, name) {
           <div style="font-size:48px;margin-bottom:16px">🌟</div>
           <h2 style="color:#1B2A4A;margin:0 0 8px">Welcome, ${name}!</h2>
           <p style="color:#6B7280;margin:0 0 24px">Thank you for joining Azura Haven. Browse our luxury rooms, explore our dining menu, and book your perfect stay.</p>
-          <a href="#" style="display:inline-block;background:#C9A96E;color:#1B2A4A;padding:12px 32px;border-radius:12px;text-decoration:none;font-weight:700;text-transform:uppercase;letter-spacing:2px;font-size:13px">Explore Rooms</a>
+          <a href="${process.env.CLIENT_URL || 'https://rift-hotel.vercel.app'}/rooms" style="display:inline-block;background:#C9A96E;color:#1B2A4A;padding:12px 32px;border-radius:12px;text-decoration:none;font-weight:700;text-transform:uppercase;letter-spacing:2px;font-size:13px">Explore Rooms</a>
         </div>
         <div style="background:#1B2A4A;padding:16px;text-align:center">
           <p style="color:#C9A96E;margin:0;font-size:12px">Nairobi, Kenya · reservations@azurahaven.com</p>
@@ -153,4 +161,40 @@ async function sendWelcomeEmail(to, name) {
   });
 }
 
-module.exports = { sendBookingConfirmation, sendStatusUpdate, sendWelcomeEmail };
+async function sendOrderNotification(to, order) {
+  return sendMail({
+    to,
+    subject: `🍽️ Room Service Order — ${order.roomNumber}`,
+    html: `
+      <div style="font-family:'Georgia',serif;max-width:560px;margin:0 auto;background:#F5F1EB;border-radius:16px;overflow:hidden">
+        <div style="background:#1B2A4A;padding:24px;text-align:center">
+          <h1 style="color:#C9A96E;margin:0;font-size:22px">🏨 Azura Haven</h1>
+        </div>
+        <div style="padding:28px">
+          <h2 style="color:#1B2A4A;margin:0 0 8px">Order Received 🍽️</h2>
+          <p style="color:#6B7280;margin:0 0 20px">Room <strong>${order.roomNumber}</strong> — ${order.userName}</p>
+          <div style="background:white;border-radius:12px;padding:16px;margin-bottom:16px">
+            ${(order.items || []).map(item => `
+              <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #EBE3D6">
+                <span style="color:#1B2A4A">${item.name} × ${item.qty}</span>
+                ${item.price > 0 ? `<span style="color:#C9A96E;font-weight:600">KES ${(item.price * item.qty).toLocaleString()}</span>` : ''}
+              </div>
+            `).join('')}
+            ${order.total > 0 ? `
+              <div style="display:flex;justify-content:space-between;padding:10px 0 0">
+                <span style="font-weight:600;color:#6B7280">Total</span>
+                <span style="color:#C9A96E;font-weight:700;font-size:18px">KES ${order.total?.toLocaleString()}</span>
+              </div>
+            ` : ''}
+          </div>
+          ${order.notes ? `<p style="color:#6B7280;font-style:italic;background:white;border-radius:12px;padding:14px;margin:0">💬 ${order.notes}</p>` : ''}
+        </div>
+        <div style="background:#1B2A4A;padding:14px;text-align:center">
+          <p style="color:#C9A96E;margin:0;font-size:12px">Azura Haven · Nairobi, Kenya</p>
+        </div>
+      </div>
+    `,
+  });
+}
+
+module.exports = { sendBookingConfirmation, sendStatusUpdate, sendWelcomeEmail, sendOrderNotification };
