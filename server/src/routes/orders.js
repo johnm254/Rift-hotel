@@ -200,27 +200,6 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
     if (updated.userEmail && updated.userEmail !== 'walkin@azurahaven.com') {
       sendOrderStatusEmail(updated.userEmail, updated, status).catch(() => {});
     }
-          to: clientEmail,
-          subject: `${sm.emoji} ${sm.text} — Azura Haven`,
-          html: `
-            <div style="font-family:'Georgia',serif;max-width:560px;margin:0 auto;background:#F5F1EB;border-radius:16px;overflow:hidden">
-              <div style="background:#1B2A4A;padding:24px;text-align:center">
-                <h1 style="color:#C9A96E;margin:0;font-size:22px">🏨 Azura Haven</h1>
-              </div>
-              <div style="padding:32px;text-align:center">
-                <div style="font-size:48px;margin-bottom:16px">${sm.emoji}</div>
-                <h2 style="color:#1B2A4A;margin:0 0 12px">${sm.text}</h2>
-                <p style="color:#6B7280;margin:0 0 20px">${sm.detail}</p>
-                <p style="color:#6B7280;font-size:13px">Order Ref: <strong>${updated.id?.slice(0,8).toUpperCase()}</strong></p>
-              </div>
-              <div style="background:#1B2A4A;padding:14px;text-align:center">
-                <p style="color:#C9A96E;margin:0;font-size:12px">Azura Haven · +254 769 113 931 · reservations@azurahaven.com</p>
-              </div>
-            </div>
-          `,
-        }).catch(() => {});
-      }
-    }
 
     res.json(updated);
   } catch (err) {
