@@ -64,8 +64,11 @@ app.get('/api/test-email', async (req, res) => {
   try {
     const emailService = require('./services/email');
     const to = req.query.to || process.env.SMTP_USER;
+    console.log('🧪 Testing email to:', to);
     const result = await emailService.sendWelcomeEmail(to, 'Test');
-    res.json({ success: !result?.error, result, to });
+    const success = !result?.error && !result?.skipped;
+    console.log('🧪 Email test result:', result);
+    res.json({ success, result, to, smtp_user: process.env.SMTP_USER, smtp_port: process.env.SMTP_PORT });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

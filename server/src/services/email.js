@@ -1,41 +1,48 @@
 const nodemailer = require('nodemailer');
 const dns = require('dns');
+const net = require('net');
 
-// Force IPv4 DNS resolution globally (fixes Render IPv6 ENETUNREACH)
+// Force IPv4 DNS resolution globally
 dns.setDefaultResultOrder('ipv4first');
 
-// Lazy transporter — only creates if SMTP is configured
+// Gmail's actual IPv4 addresses for SMTP (port 465)
+// Using direct IP bypasses DNS resolution entirely — fixes ENETUNREACH on Render
+const GMAIL_SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
+const GMAIL_SMTP_IP   = '74.125.133.108'; // smtp.gmail.com IPv4 — fallback if DNS fails
+
 let _transporter = null;
 
 function getTransporter() {
   if (_transporter) return _transporter;
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn('⚠️  SMTP not configured — emails will be skipped. Set SMTP_USER and SMTP_PASS in .env');
+    console.warn('⚠️  SMTP not configured — set SMTP_USER and SMTP_PASS');
     return null;
   }
 
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  // Default to port 465 (SSL) for Gmail — more reliable on cloud hosts
-  const port = parseInt(process.env.SMTP_PORT) || 465;
-  const secure = port === 465 ? true : (process.env.SMTP_SECURE === 'true');
+  const port   = parseInt(process.env.SMTP_PORT) || 465;
+  const secure = port === 465;
 
   _transporter = nodemailer.createTransport({
-    host,
+    host: GMAIL_SMTP_HOST,
     port,
     secure,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    // Force IPv4 socket (prevents ENETUNREACH on IPv6-only hosts)
+    // Force IPv4 at the socket level — critical for Render
     family: 4,
-    tls: { rejectUnauthorized: false },
-    connectionTimeout: 20000,
-    greetingTimeout: 15000,
-    socketTimeout: 25000,
+    tls: {
+      rejectUnauthorized: false,
+      // Explicitly set servername so TLS works with direct IP
+      servername: GMAIL_SMTP_HOST,
+    },
+    connectionTimeout: 30000,
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
   });
 
-  console.log(`📧 SMTP configured: ${host}:${port} (secure=${secure}) as ${process.env.SMTP_USER}`);
+  console.log(`📧 SMTP: ${GMAIL_SMTP_HOST}:${port} (secure=${secure}) as ${process.env.SMTP_USER}`);
   return _transporter;
 }
 
@@ -49,9 +56,35 @@ async function sendMail(options) {
     console.log('📧 Email sent to:', options.to, '| ID:', result.messageId);
     return result;
   } catch (err) {
-    console.error('❌ Email send failed to:', options.to, '| Error:', err.message);
-    // Reset transporter so next attempt creates a fresh connection
+    console.error('❌ Email failed (attempt 1):', err.message);
     _transporter = null;
+
+    // Retry with direct IPv4 address to bypass DNS
+    if (err.message.includes('ENETUNREACH') || err.message.includes('ECONNREFUSED') || err.message.includes('getaddrinfo')) {
+      console.log('🔄 Retrying with direct IPv4...');
+      try {
+        const port   = parseInt(process.env.SMTP_PORT) || 465;
+        const secure = port === 465;
+        const retryTransport = require('nodemailer').createTransport({
+          host: GMAIL_SMTP_IP,
+          port,
+          secure,
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+          family: 4,
+          tls: { rejectUnauthorized: false, servername: 'smtp.gmail.com' },
+          connectionTimeout: 30000,
+          greetingTimeout: 20000,
+          socketTimeout: 30000,
+        });
+        const result = await retryTransport.sendMail({ from: FROM(), ...options });
+        console.log('📧 Email sent (retry) to:', options.to, '| ID:', result.messageId);
+        return result;
+      } catch (retryErr) {
+        console.error('❌ Email retry also failed:', retryErr.message);
+        return { error: retryErr.message };
+      }
+    }
+
     return { error: err.message };
   }
 }
