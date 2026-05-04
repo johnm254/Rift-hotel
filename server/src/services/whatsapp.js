@@ -112,6 +112,55 @@ async function sendOrderWhatsApp(phone, order) {
   return sendWhatsApp(phone, msg);
 }
 
+// Client-facing order receipt — friendly confirmation sent to the customer
+async function sendOrderReceiptWhatsApp(phone, order) {
+  if (!phone) return;
+
+  const isService = order.type === 'service';
+  const isWalkin  = order.type === 'walkin';
+
+  const itemsList = (order.items || [])
+    .map(i => `  ✓ ${i.name}${i.qty > 1 ? ` × ${i.qty}` : ''}${i.price > 0 ? ` — KES ${(i.price * i.qty).toLocaleString()}` : ''}`)
+    .join('\n');
+
+  const eta = isService ? '15–30 minutes' : isWalkin ? '20–35 minutes' : '30–45 minutes';
+
+  const msg =
+    `🏨 *Azura Haven*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    (isService
+      ? `✅ *Service Request Received!*\n\nYour *${order.items?.[0]?.name}* request has been logged. Our team will attend to you shortly.\n`
+      : `✅ *Order Confirmed!*\n\n${itemsList}\n\n` +
+        (order.total > 0 ? `💰 *Total: KES ${order.total?.toLocaleString()}*\n` : '') +
+        (order.paymentMethod ? `💳 Paid via: ${order.paymentMethod.toUpperCase()}\n` : '')
+    ) +
+    `\n⏱️ Estimated time: *${eta}*\n` +
+    (order.roomNumber && order.roomNumber !== 'Walk-in'
+      ? `📍 Delivering to: *${order.roomNumber}*\n`
+      : '') +
+    `\n_Ref: ${(order.id || '').slice(0, 8).toUpperCase() || 'NEW'}_\n` +
+    `\nQuestions? Call us: *+254 769 113 931*`;
+
+  return sendWhatsApp(phone, msg);
+}
+
+// Client status update — sent when order moves to on-the-way or delivered
+async function sendOrderStatusWhatsApp(phone, order, newStatus) {
+  if (!phone) return;
+
+  const msgs = {
+    'preparing':    `👨‍🍳 *Your order is being prepared!*\n\nWe're working on your order at *${order.roomNumber}*. It'll be with you soon! 🍽️`,
+    'on-the-way':   `🚶 *Your order is on the way!*\n\nYour order from Azura Haven is heading to *${order.roomNumber}* right now. Please be ready to receive it! 🏃`,
+    'delivered':    `✅ *Order Delivered!*\n\nYour order has been delivered to *${order.roomNumber}*. Enjoy your meal! 😊\n\nThank you for choosing Azura Haven. 🏨`,
+    'completed':    `🎉 *All done!*\n\nYour request at Azura Haven has been completed. We hope everything was perfect!\n\nRate your experience: ${process.env.CLIENT_URL || 'https://rift-hotel.vercel.app'}/survey`,
+    'cancelled':    `❌ *Order Cancelled*\n\nYour order at Azura Haven has been cancelled. If this was a mistake, please contact us at *+254 769 113 931*.`,
+  };
+
+  const msg = msgs[newStatus];
+  if (!msg) return;
+  return sendWhatsApp(phone, msg);
+}
+
 module.exports = {
   sendWhatsApp,
   sendBookingWhatsApp,
@@ -119,4 +168,6 @@ module.exports = {
   sendPaymentReceiptWhatsApp,
   sendCheckInReminderWhatsApp,
   sendOrderWhatsApp,
+  sendOrderReceiptWhatsApp,
+  sendOrderStatusWhatsApp,
 };

@@ -4,21 +4,28 @@ const router = express.Router();
 const { db } = require('../config/firebase');
 const { authenticate, isAdmin } = require('../middleware/auth');
 const { sendOrderNotification } = require('../services/email');
-const { sendOrderWhatsApp } = require('../services/whatsapp');
+const { sendOrderWhatsApp, sendOrderReceiptWhatsApp, sendOrderStatusWhatsApp } = require('../services/whatsapp');
 
-// ── Shared helper: save order + notify owner ──────────────────────────────────
+// ── Shared helper: save order + notify owner + notify client ──────────────────
 async function createOrder(orderData) {
   const docRef = await db.collection('orders').add(orderData);
   const saved = { id: docRef.id, ...orderData };
 
   const ownerPhone = process.env.HOTEL_OWNER_PHONE || '0769113931';
 
-  // WhatsApp to hotel owner — non-blocking
+  // 1. WhatsApp alert to hotel owner
   sendOrderWhatsApp(ownerPhone, saved).catch(err =>
-    console.error('Order WhatsApp failed:', err.message)
+    console.error('Owner WhatsApp failed:', err.message)
   );
 
-  // Email to admin — non-blocking
+  // 2. WhatsApp receipt to client (if phone provided)
+  if (saved.clientPhone) {
+    sendOrderReceiptWhatsApp(saved.clientPhone, saved).catch(err =>
+      console.error('Client WhatsApp failed:', err.message)
+    );
+  }
+
+  // 3. Email to admin
   const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
   if (adminEmail) {
     sendOrderNotification(adminEmail, saved).catch(err =>
@@ -35,10 +42,18 @@ router.post('/', authenticate, async (req, res) => {
     const { items, bookingId, roomNumber, notes, total, type, paymentMethod } = req.body;
     if (!items?.length) return res.status(400).json({ error: 'No items in order' });
 
+    // Look up client's phone from their user profile
+    let clientPhone = null;
+    try {
+      const userDoc = await db.collection('users').doc(req.user.uid).get();
+      clientPhone = userDoc.data()?.phone || null;
+    } catch { /* no phone on file — skip */ }
+
     const order = {
       userId: req.user.uid,
       userEmail: req.user.email,
       userName: req.user.name || req.user.email,
+      clientPhone,
       items,
       bookingId: bookingId || null,
       roomNumber: roomNumber || 'Unknown',
@@ -60,13 +75,14 @@ router.post('/', authenticate, async (req, res) => {
 // ── POST /api/orders/walkin — public: walk-in restaurant order (no auth) ──────
 router.post('/walkin', async (req, res) => {
   try {
-    const { items, roomNumber, notes, total, paymentMethod, tableNo } = req.body;
+    const { items, roomNumber, notes, total, paymentMethod, tableNo, clientPhone, clientName } = req.body;
     if (!items?.length) return res.status(400).json({ error: 'No items in order' });
 
     const order = {
       userId: 'walkin',
       userEmail: 'walkin@azurahaven.com',
-      userName: 'Walk-in Guest',
+      userName: clientName || 'Walk-in Guest',
+      clientPhone: clientPhone || null,
       items,
       bookingId: null,
       roomNumber: tableNo || roomNumber || 'Walk-in',
@@ -151,11 +167,12 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
     const doc = await db.collection('orders').doc(req.params.id).get();
     const updated = { id: doc.id, ...doc.data() };
 
-    // Notify owner when status changes to key milestones
+    const { sendWhatsApp, sendOrderStatusWhatsApp } = require('../services/whatsapp');
+    const ownerPhone = process.env.HOTEL_OWNER_PHONE || '0769113931';
+
+    // Notify owner on key milestones
     if (['on-the-way','delivered','completed'].includes(status)) {
-      const ownerPhone = process.env.HOTEL_OWNER_PHONE || '0769113931';
       const statusEmoji = status === 'on-the-way' ? '🚶' : status === 'delivered' ? '✅' : '🎉';
-      const { sendWhatsApp } = require('../services/whatsapp');
       sendWhatsApp(ownerPhone,
         `${statusEmoji} *Order Update*\n` +
         `Room: *${updated.roomNumber}*\n` +
@@ -163,6 +180,11 @@ router.patch('/:id/status', authenticate, isAdmin, async (req, res) => {
         `${updated.assignedTo ? `Staff: ${updated.assignedTo}\n` : ''}` +
         `Items: ${(updated.items || []).map(i => i.name).join(', ')}`
       ).catch(() => {});
+    }
+
+    // Notify client on every status change
+    if (updated.clientPhone) {
+      sendOrderStatusWhatsApp(updated.clientPhone, updated, status).catch(() => {});
     }
 
     res.json(updated);

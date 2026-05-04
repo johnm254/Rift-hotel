@@ -107,15 +107,23 @@ function MpesaWaiting({ phone, total, status, onCancel }) {
 // ── Cart / Checkout Drawer ────────────────────────────────────────────────────
 function CartDrawer({ cart, onAdd, onRemove, onClose, onCheckout, isCheckingOut, user }) {
   const [tableNo, setTableNo] = useState('');
+  const [clientName, setClientName] = useState(user?.name || '');
+  const [clientPhone, setClientPhone] = useState(user?.phone || '');
   const [notes, setNotes] = useState('');
   const [payMethod, setPayMethod] = useState('mpesa');
-  const [mpesaPhone, setMpesaPhone] = useState('');
+  const [mpesaPhone, setMpesaPhone] = useState(user?.phone || '');
   const [step, setStep] = useState('cart'); // 'cart' | 'checkout' | 'mpesa-waiting'
-  const [mpesaStatus, setMpesaStatus] = useState(''); // 'sending'|'waiting'|'verifying'|'confirmed'
+  const [mpesaStatus, setMpesaStatus] = useState('');
   const [error, setError] = useState('');
 
   const cartItems = Object.values(cart);
   const total = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
+
+  // When M-Pesa is selected, sync the phone fields
+  const handlePhoneChange = (val) => {
+    setMpesaPhone(val);
+    setClientPhone(val); // same number gets the receipt
+  };
 
   const handleConfirmOrder = async () => {
     setError('');
@@ -131,7 +139,6 @@ function CartDrawer({ cart, onAdd, onRemove, onClose, onCheckout, isCheckingOut,
       setMpesaStatus('sending');
 
       try {
-        // 1. Send STK push (public endpoint — no auth needed)
         let checkoutRequestId = null;
         try {
           const stkRes = await api.post('/payments/mpesa/stk-push-public', {
@@ -148,7 +155,7 @@ function CartDrawer({ cart, onAdd, onRemove, onClose, onCheckout, isCheckingOut,
           return;
         }
 
-        // 2. Poll for payment confirmation (max 60s, every 5s)
+        // Poll for payment confirmation (max 60s, every 5s)
         let paid = false;
         for (let i = 0; i < 12; i++) {
           await new Promise(r => setTimeout(r, 5000));
@@ -156,23 +163,9 @@ function CartDrawer({ cart, onAdd, onRemove, onClose, onCheckout, isCheckingOut,
           try {
             const queryRes = await api.post('/payments/mpesa/query-public', { checkoutRequestId });
             const rc = queryRes.data?.ResultCode;
-            if (rc === 0 || rc === '0') {
-              paid = true;
-              setMpesaStatus('confirmed');
-              break;
-            }
-            if (rc === 1032 || rc === '1032') {
-              setError('Payment cancelled. Please try again.');
-              setStep('checkout');
-              setMpesaStatus('');
-              return;
-            }
-            if (rc === 1037 || rc === '1037') {
-              setError('Payment timed out on your phone. Please try again.');
-              setStep('checkout');
-              setMpesaStatus('');
-              return;
-            }
+            if (rc === 0 || rc === '0') { paid = true; setMpesaStatus('confirmed'); break; }
+            if (rc === 1032 || rc === '1032') { setError('Payment cancelled. Please try again.'); setStep('checkout'); setMpesaStatus(''); return; }
+            if (rc === 1037 || rc === '1037') { setError('Payment timed out. Please try again.'); setStep('checkout'); setMpesaStatus(''); return; }
           } catch { /* keep polling */ }
         }
 
@@ -183,9 +176,8 @@ function CartDrawer({ cart, onAdd, onRemove, onClose, onCheckout, isCheckingOut,
           return;
         }
 
-        // 3. Only place order after payment confirmed
-        await new Promise(r => setTimeout(r, 800)); // brief pause to show confirmed state
-        onCheckout({ tableNo, notes, payMethod: 'mpesa', mpesaPhone: phone, total, cartItems });
+        await new Promise(r => setTimeout(r, 800));
+        onCheckout({ tableNo, notes, payMethod: 'mpesa', mpesaPhone: phone, clientPhone: phone, clientName, total, cartItems });
 
       } catch (e) {
         setError(e.response?.data?.error || 'Payment failed. Please try again.');
@@ -194,8 +186,7 @@ function CartDrawer({ cart, onAdd, onRemove, onClose, onCheckout, isCheckingOut,
       }
 
     } else {
-      // Cash or Card — place order immediately
-      onCheckout({ tableNo, notes, payMethod, mpesaPhone: '', total, cartItems });
+      onCheckout({ tableNo, notes, payMethod, mpesaPhone: '', clientPhone, clientName, total, cartItems });
     }
   };
 
@@ -293,6 +284,25 @@ function CartDrawer({ cart, onAdd, onRemove, onClose, onCheckout, isCheckingOut,
                 </div>
               )}
 
+              {/* Name + Phone — for receipt delivery */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-navy mb-1.5">Your Name</label>
+                  <input value={clientName} onChange={e => setClientName(e.target.value)}
+                    placeholder="e.g. John"
+                    className="w-full px-3 py-3 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-navy mb-1.5">
+                    Phone <span className="text-muted font-normal text-xs">(for receipt)</span>
+                  </label>
+                  <input type="tel" value={clientPhone} onChange={e => { setClientPhone(e.target.value); if (payMethod === 'mpesa') setMpesaPhone(e.target.value); }}
+                    placeholder="07XX XXX XXX"
+                    className="w-full px-3 py-3 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy text-sm transition-colors" />
+                </div>
+              </div>
+              <p className="text-xs text-muted -mt-2">We'll send your order receipt to this number via WhatsApp 📲</p>
+
               <div>
                 <label className="block text-sm font-medium text-navy mb-1.5">Table / Location</label>
                 <input value={tableNo} onChange={e => setTableNo(e.target.value)}
@@ -329,11 +339,11 @@ function CartDrawer({ cart, onAdd, onRemove, onClose, onCheckout, isCheckingOut,
                   <label className="block text-sm font-medium text-navy mb-1.5">Safaricom Number</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted text-sm">🇰🇪</span>
-                    <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)}
+                    <input type="tel" value={mpesaPhone} onChange={e => handlePhoneChange(e.target.value)}
                       placeholder="0712 345 678"
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy transition-colors" />
                   </div>
-                  <p className="text-xs text-muted mt-1">You'll receive an STK push — enter your PIN to pay</p>
+                  <p className="text-xs text-muted mt-1">STK push sent to this number — enter your PIN to pay</p>
                 </div>
               )}
 
@@ -355,8 +365,8 @@ function CartDrawer({ cart, onAdd, onRemove, onClose, onCheckout, isCheckingOut,
                 className="w-full bg-gold hover:bg-gold-light disabled:bg-gold/50 text-navy font-bold py-4 rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg shadow-gold/20">
                 {isCheckingOut ? 'Placing Order...' :
                   payMethod === 'mpesa' ? `Pay KES ${total.toLocaleString()} via M-Pesa` :
-                  payMethod === 'cash' ? `Place Order · Pay Cash` :
-                  `Place Order · Pay by Card`}
+                  payMethod === 'cash' ? 'Place Order · Pay Cash' :
+                  'Place Order · Pay by Card'}
               </button>
               <button onClick={() => { setStep('cart'); setError(''); }} className="w-full text-muted hover:text-navy text-sm py-2 transition-colors">
                 ← Back to Order
@@ -376,13 +386,19 @@ function OrderConfirmed({ order, onReset }) {
       <div className="text-center max-w-sm w-full">
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5 text-4xl">🎉</div>
         <h2 className="text-2xl font-serif font-bold text-navy mb-2">Order Placed!</h2>
-        <p className="text-muted mb-1">
-          {order.tableNo ? `Your order for <strong>${order.tableNo}</strong> is being prepared.` : 'Your order is being prepared.'}
-        </p>
+        <p className="text-muted mb-1">Your order is being prepared.</p>
         <p className="text-muted text-sm mb-1">Estimated time: <strong>20–35 minutes</strong></p>
-        <p className="text-gold font-bold text-xl mb-6">KES {order.total?.toLocaleString()}</p>
+        <p className="text-gold font-bold text-xl mb-4">KES {order.total?.toLocaleString()}</p>
 
-        {/* Receipt-style summary */}
+        {/* WhatsApp receipt note */}
+        {order.clientPhone && (
+          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm text-green-800">
+            <span className="text-lg">📲</span>
+            <span>Receipt sent to <strong>{order.clientPhone}</strong> via WhatsApp</span>
+          </div>
+        )}
+
+        {/* Receipt summary */}
         <div className="bg-cream rounded-2xl p-5 text-left mb-6 space-y-2">
           <div className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">Order Summary</div>
           {order.cartItems?.map((item, i) => (
@@ -398,8 +414,14 @@ function OrderConfirmed({ order, onReset }) {
           </div>
           <div className="flex justify-between text-xs text-muted pt-1">
             <span>Payment</span>
-            <span className="capitalize">{order.payMethod === 'mpesa' ? '📱 M-Pesa' : order.payMethod === 'cash' ? '💵 Cash' : '💳 Card'}</span>
+            <span>{order.payMethod === 'mpesa' ? '📱 M-Pesa' : order.payMethod === 'cash' ? '💵 Cash' : '💳 Card'}</span>
           </div>
+          {order.tableNo && (
+            <div className="flex justify-between text-xs text-muted">
+              <span>Location</span>
+              <span>{order.tableNo}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 justify-center">
@@ -470,7 +492,7 @@ export default function Meals() {
   };
 
   const placeOrder = useMutation({
-    mutationFn: ({ tableNo, notes, payMethod, mpesaPhone, total, cartItems }) =>
+    mutationFn: ({ tableNo, notes, payMethod, mpesaPhone, clientPhone, clientName, total, cartItems }) =>
       api.post('/orders/walkin', {
         items: cartItems.map(i => ({ mealId: i.id, name: i.name, price: i.price, qty: i.qty })),
         tableNo: tableNo || 'Walk-in',
@@ -478,6 +500,8 @@ export default function Meals() {
         notes: `${notes}${mpesaPhone ? ` [M-Pesa: ${mpesaPhone}]` : ''}`.trim(),
         total,
         paymentMethod: payMethod,
+        clientPhone: clientPhone || null,
+        clientName: clientName || null,
       }).catch(() => ({ data: { id: 'order-' + Date.now() } })),
     onSuccess: (_, vars) => {
       setConfirmed(vars);
