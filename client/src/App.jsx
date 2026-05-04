@@ -45,6 +45,7 @@ import AdminProperties from './pages/admin/Properties';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './components/AdminLayout';
 import GuestRequests from './pages/admin/GuestRequests';
+import Staff from './pages/admin/Staff';
 
 // Push notification setup
 function usePushNotifications(user, isAdmin) {
@@ -84,6 +85,7 @@ function AppContent() {
             <Route path="/admin/pricing" element={<ProtectedRoute admin><AdminLayout><AdminPricing /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/properties" element={<ProtectedRoute admin><AdminLayout><AdminProperties /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/guest-requests" element={<ProtectedRoute admin><AdminLayout><GuestRequests /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/staff" element={<ProtectedRoute admin><AdminLayout><Staff /></AdminLayout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
         </PageWrapper>
