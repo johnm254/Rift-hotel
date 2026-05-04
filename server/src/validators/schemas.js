@@ -46,7 +46,10 @@ const registerSchema = z.object({
 });
 
 const mpesaSchema = z.object({
-  phone: z.string().regex(/^(\+?254|0)[17]\d{8}$/, 'Invalid Kenyan phone number'),
+  phone: z.string().regex(
+    /^(\+?254|0)[17]\d{8}$|^(\+?254|0)[0-9]\d{8}$/,
+    'Invalid Kenyan phone number. Use format: 07XX XXX XXX or +254 7XX XXX XXX'
+  ),
   amount: z.coerce.number().positive().min(1),
   bookingId: z.string().optional(),
 });

@@ -34,7 +34,9 @@ async function getMpesaToken() {
 router.post('/mpesa/stk-push', authenticate, validate(mpesaSchema), async (req, res) => {
   try {
     const { phone, amount, bookingId } = req.validated;
-    let formattedPhone = phone.replace(/\s/g, '').replace(/^0+/, '');
+    let formattedPhone = phone.replace(/[\s\-]/g, '');
+    if (formattedPhone.startsWith('+')) formattedPhone = formattedPhone.slice(1);
+    if (formattedPhone.startsWith('0')) formattedPhone = '254' + formattedPhone.slice(1);
     if (!formattedPhone.startsWith('254')) formattedPhone = '254' + formattedPhone;
 
     const token = await getMpesaToken();
@@ -53,9 +55,9 @@ router.post('/mpesa/stk-push', authenticate, validate(mpesaSchema), async (req, 
       PartyA: formattedPhone,
       PartyB: process.env.MPESA_SHORTCODE,
       PhoneNumber: formattedPhone,
-      CallBackURL: `${process.env.API_BASE_URL || 'https://your-api.com'}/api/payments/mpesa/callback`,
+      CallBackURL: `${process.env.API_BASE_URL || 'https://rift-hotel.onrender.com'}/api/payments/mpesa/callback`,
       AccountReference: bookingId || `AZURA-${Date.now()}`,
-      TransactionDesc: 'Azura Haven Hotel Booking',
+      TransactionDesc: 'Azura Haven Payment',
     }, { headers: { Authorization: `Bearer ${token}` } });
 
     await db.collection('payments').add({
@@ -65,7 +67,7 @@ router.post('/mpesa/stk-push', authenticate, validate(mpesaSchema), async (req, 
       phone: formattedPhone,
       amount: Math.round(amount),
       bookingId: bookingId || null,
-      userId: req.user.uid,
+      userId: req.user?.uid || 'walkin',
       status: 'pending',
       createdAt: new Date().toISOString(),
     });
@@ -78,7 +80,90 @@ router.post('/mpesa/stk-push', authenticate, validate(mpesaSchema), async (req, 
     });
   } catch (err) {
     console.error('M-Pesa STK error:', err.response?.data || err.message);
-    res.status(500).json({ error: 'M-Pesa payment initiation failed. Please try again.' });
+    const errMsg = err.response?.data?.errorMessage || err.response?.data?.ResultDesc || 'M-Pesa payment initiation failed. Please try again.';
+    res.status(500).json({ error: errMsg });
+  }
+});
+
+// ── POST /api/payments/mpesa/stk-push-public ─────────────────────────────────
+// Same as above but no auth required — for walk-in restaurant guests
+router.post('/mpesa/stk-push-public', validate(mpesaSchema), async (req, res) => {
+  try {
+    const { phone, amount, bookingId } = req.validated;
+    let formattedPhone = phone.replace(/[\s\-]/g, '');
+    if (formattedPhone.startsWith('+')) formattedPhone = formattedPhone.slice(1);
+    if (formattedPhone.startsWith('0')) formattedPhone = '254' + formattedPhone.slice(1);
+    if (!formattedPhone.startsWith('254')) formattedPhone = '254' + formattedPhone;
+
+    const token = await getMpesaToken();
+    const baseUrl = (process.env.MPESA_ENV || process.env.MPESA_ENVIRONMENT) === 'production'
+      ? 'https://api.safaricom.co.ke'
+      : 'https://sandbox.safaricom.co.ke';
+    const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+    const password = Buffer.from(`${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`).toString('base64');
+
+    const { data } = await axios.post(`${baseUrl}/mpesa/stkpush/v1/processrequest`, {
+      BusinessShortCode: process.env.MPESA_SHORTCODE,
+      Password: password,
+      Timestamp: timestamp,
+      TransactionType: 'CustomerPayBillOnline',
+      Amount: Math.round(amount),
+      PartyA: formattedPhone,
+      PartyB: process.env.MPESA_SHORTCODE,
+      PhoneNumber: formattedPhone,
+      CallBackURL: `${process.env.API_BASE_URL || 'https://rift-hotel.onrender.com'}/api/payments/mpesa/callback`,
+      AccountReference: bookingId || `WALKIN-${Date.now()}`,
+      TransactionDesc: 'Azura Haven Restaurant',
+    }, { headers: { Authorization: `Bearer ${token}` } });
+
+    await db.collection('payments').add({
+      type: 'mpesa',
+      merchantRequestId: data.MerchantRequestID,
+      checkoutRequestId: data.CheckoutRequestID,
+      phone: formattedPhone,
+      amount: Math.round(amount),
+      bookingId: bookingId || null,
+      userId: 'walkin',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
+
+    res.json({
+      success: true,
+      merchantRequestId: data.MerchantRequestID,
+      checkoutRequestId: data.CheckoutRequestID,
+      message: 'STK Push sent. Check your phone and enter your M-Pesa PIN.',
+    });
+  } catch (err) {
+    console.error('M-Pesa STK (public) error:', err.response?.data || err.message);
+    const errMsg = err.response?.data?.errorMessage || err.response?.data?.ResultDesc || 'M-Pesa payment initiation failed. Please try again.';
+    res.status(500).json({ error: errMsg });
+  }
+});
+
+// ── POST /api/payments/mpesa/query-public — check STK status (no auth) ───────
+router.post('/mpesa/query-public', async (req, res) => {
+  try {
+    const { checkoutRequestId } = req.body;
+    if (!checkoutRequestId) return res.status(400).json({ error: 'checkoutRequestId required' });
+
+    const token = await getMpesaToken();
+    const baseUrl = (process.env.MPESA_ENV || process.env.MPESA_ENVIRONMENT) === 'production'
+      ? 'https://api.safaricom.co.ke'
+      : 'https://sandbox.safaricom.co.ke';
+    const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+    const password = Buffer.from(`${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`).toString('base64');
+
+    const { data } = await axios.post(`${baseUrl}/mpesa/stkpushquery/v1/query`, {
+      BusinessShortCode: process.env.MPESA_SHORTCODE,
+      Password: password,
+      Timestamp: timestamp,
+      CheckoutRequestID: checkoutRequestId,
+    }, { headers: { Authorization: `Bearer ${token}` } });
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.response?.data?.errorMessage || err.message });
   }
 });
 
@@ -142,10 +227,12 @@ router.post('/mpesa/callback', async (req, res) => {
   }
 });
 
-// ── POST /api/payments/mpesa/query — check STK push status ───────────────────
+// ── POST /api/payments/mpesa/query — check STK push status (authenticated) ───
 router.post('/mpesa/query', authenticate, async (req, res) => {
   try {
     const { checkoutRequestId } = req.body;
+    if (!checkoutRequestId) return res.status(400).json({ error: 'checkoutRequestId required' });
+
     const token = await getMpesaToken();
     const baseUrl = (process.env.MPESA_ENV || process.env.MPESA_ENVIRONMENT) === 'production'
       ? 'https://api.safaricom.co.ke'

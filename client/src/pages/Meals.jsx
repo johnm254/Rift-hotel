@@ -41,35 +41,194 @@ function CartButton({ count, total, onClick }) {
   );
 }
 
+// ── M-Pesa STK Waiting UI ─────────────────────────────────────────────────────
+function MpesaWaiting({ phone, total, status, onCancel }) {
+  const steps = [
+    { key: 'sending',   label: 'Sending STK Push...',       done: ['waiting','verifying','confirmed'].includes(status) },
+    { key: 'waiting',   label: `Check your phone: ${phone}`, done: ['verifying','confirmed'].includes(status) },
+    { key: 'verifying', label: 'Verifying payment...',       done: status === 'confirmed' },
+    { key: 'confirmed', label: 'Payment confirmed!',         done: status === 'confirmed' },
+  ];
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 space-y-6">
+      <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl">📱</div>
+      <div className="text-center">
+        <h3 className="font-bold text-navy text-lg mb-1">M-Pesa Payment</h3>
+        <p className="text-gold font-bold text-xl">KES {total.toLocaleString()}</p>
+      </div>
+
+      {/* Step indicators */}
+      <div className="w-full space-y-3">
+        {steps.map((s, i) => (
+          <div key={s.key} className="flex items-center gap-3">
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
+              s.done ? 'bg-green-500 text-white' :
+              status === s.key ? 'bg-yellow-400 text-navy animate-pulse' :
+              'bg-cream-dark text-muted'
+            }`}>
+              {s.done ? '✓' : i + 1}
+            </div>
+            <span className={`text-sm ${s.done ? 'text-green-600 font-medium' : status === s.key ? 'text-navy font-semibold' : 'text-muted'}`}>
+              {s.label}
+            </span>
+            {status === s.key && !s.done && (
+              <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin ml-auto flex-shrink-0" />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {status === 'waiting' && (
+        <div className="w-full bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800 text-center">
+          <p className="font-semibold mb-1">📲 Enter your M-Pesa PIN</p>
+          <p className="text-xs">A prompt has been sent to <strong>{phone}</strong>. Enter your PIN to pay <strong>KES {total.toLocaleString()}</strong>.</p>
+          <p className="text-xs mt-1 text-yellow-600">⚠️ Do NOT close this page</p>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      {['waiting','verifying'].includes(status) && (
+        <div className="w-full flex gap-1">
+          {Array.from({length: 12}).map((_, i) => (
+            <div key={i} className="flex-1 h-1 rounded-full bg-yellow-200 overflow-hidden">
+              <div className="h-full bg-yellow-400 animate-pulse" style={{ animationDelay: `${i * 0.1}s` }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button onClick={onCancel} className="text-muted hover:text-red-500 text-sm transition-colors">
+        Cancel Payment
+      </button>
+    </div>
+  );
+}
+
 // ── Cart / Checkout Drawer ────────────────────────────────────────────────────
-function CartDrawer({ cart, meals, onAdd, onRemove, onClose, onCheckout, isCheckingOut, user }) {
+function CartDrawer({ cart, onAdd, onRemove, onClose, onCheckout, isCheckingOut, user }) {
   const [tableNo, setTableNo] = useState('');
   const [notes, setNotes] = useState('');
   const [payMethod, setPayMethod] = useState('mpesa');
-  const [mpesaPhone, setMpesaPhone] = useState(user?.phone || '');
-  const [step, setStep] = useState('cart'); // 'cart' | 'checkout'
+  const [mpesaPhone, setMpesaPhone] = useState('');
+  const [step, setStep] = useState('cart'); // 'cart' | 'checkout' | 'mpesa-waiting'
+  const [mpesaStatus, setMpesaStatus] = useState(''); // 'sending'|'waiting'|'verifying'|'confirmed'
+  const [error, setError] = useState('');
 
   const cartItems = Object.values(cart);
   const total = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
 
+  const handleConfirmOrder = async () => {
+    setError('');
+
+    if (payMethod === 'mpesa') {
+      const phone = mpesaPhone.trim();
+      if (!phone) return setError('Please enter your M-Pesa phone number.');
+      if (!/^(\+?254|0)\d{9}$/.test(phone.replace(/\s/g, ''))) {
+        return setError('Enter a valid Kenyan number e.g. 0712 345 678');
+      }
+
+      setStep('mpesa-waiting');
+      setMpesaStatus('sending');
+
+      try {
+        // 1. Send STK push (public endpoint — no auth needed)
+        let checkoutRequestId = null;
+        try {
+          const stkRes = await api.post('/payments/mpesa/stk-push-public', {
+            phone: phone.replace(/\s/g, ''),
+            amount: total,
+          });
+          checkoutRequestId = stkRes.data.checkoutRequestId;
+          setMpesaStatus('waiting');
+        } catch (stkErr) {
+          const msg = stkErr.response?.data?.error || 'STK push failed. Check your number and try again.';
+          setError(msg);
+          setStep('checkout');
+          setMpesaStatus('');
+          return;
+        }
+
+        // 2. Poll for payment confirmation (max 60s, every 5s)
+        let paid = false;
+        for (let i = 0; i < 12; i++) {
+          await new Promise(r => setTimeout(r, 5000));
+          if (i >= 5) setMpesaStatus('verifying');
+          try {
+            const queryRes = await api.post('/payments/mpesa/query-public', { checkoutRequestId });
+            const rc = queryRes.data?.ResultCode;
+            if (rc === 0 || rc === '0') {
+              paid = true;
+              setMpesaStatus('confirmed');
+              break;
+            }
+            if (rc === 1032 || rc === '1032') {
+              setError('Payment cancelled. Please try again.');
+              setStep('checkout');
+              setMpesaStatus('');
+              return;
+            }
+            if (rc === 1037 || rc === '1037') {
+              setError('Payment timed out on your phone. Please try again.');
+              setStep('checkout');
+              setMpesaStatus('');
+              return;
+            }
+          } catch { /* keep polling */ }
+        }
+
+        if (!paid) {
+          setError('Payment not confirmed after 60s. Please try again or use Cash.');
+          setStep('checkout');
+          setMpesaStatus('');
+          return;
+        }
+
+        // 3. Only place order after payment confirmed
+        await new Promise(r => setTimeout(r, 800)); // brief pause to show confirmed state
+        onCheckout({ tableNo, notes, payMethod: 'mpesa', mpesaPhone: phone, total, cartItems });
+
+      } catch (e) {
+        setError(e.response?.data?.error || 'Payment failed. Please try again.');
+        setStep('checkout');
+        setMpesaStatus('');
+      }
+
+    } else {
+      // Cash or Card — place order immediately
+      onCheckout({ tableNo, notes, payMethod, mpesaPhone: '', total, cartItems });
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end" onClick={step === 'mpesa-waiting' ? undefined : onClose}>
       <div className="absolute inset-0 bg-navy/50 backdrop-blur-sm" />
       <div className="relative w-full max-w-md bg-white h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-cream-dark">
           <div>
             <h2 className="font-serif font-bold text-navy text-lg">
-              {step === 'cart' ? 'Your Order' : 'Checkout'}
+              {step === 'cart' ? 'Your Order' : step === 'mpesa-waiting' ? 'M-Pesa Payment' : 'Checkout'}
             </h2>
             <p className="text-xs text-muted">{cartItems.length} item{cartItems.length !== 1 ? 's' : ''} · KES {total.toLocaleString()}</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-cream flex items-center justify-center text-muted transition-colors">✕</button>
+          {step !== 'mpesa-waiting' && (
+            <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-cream flex items-center justify-center text-muted transition-colors">✕</button>
+          )}
         </div>
 
-        {step === 'cart' ? (
+        {/* M-Pesa waiting screen */}
+        {step === 'mpesa-waiting' && (
+          <MpesaWaiting
+            phone={mpesaPhone}
+            total={total}
+            status={mpesaStatus}
+            onCancel={() => { setStep('checkout'); setMpesaStatus(''); setError(''); }}
+          />
+        )}
+
+        {/* Cart view */}
+        {step === 'cart' && (
           <>
-            {/* Items */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
               {cartItems.length === 0 ? (
                 <div className="text-center py-16">
@@ -86,17 +245,13 @@ function CartDrawer({ cart, meals, onAdd, onRemove, onClose, onCheckout, isCheck
                     <div className="text-gold font-bold text-sm">KES {(item.price * item.qty).toLocaleString()}</div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={() => onRemove(item.id)}
-                      className="w-7 h-7 rounded-full bg-white border border-cream-dark flex items-center justify-center text-navy font-bold text-sm hover:bg-cream-dark transition-colors">−</button>
+                    <button onClick={() => onRemove(item.id)} className="w-7 h-7 rounded-full bg-white border border-cream-dark flex items-center justify-center text-navy font-bold text-sm hover:bg-cream-dark transition-colors">−</button>
                     <span className="font-bold text-navy w-5 text-center text-sm">{item.qty}</span>
-                    <button onClick={() => onAdd(item)}
-                      className="w-7 h-7 rounded-full bg-gold flex items-center justify-center text-navy font-bold text-sm hover:bg-gold-light transition-colors">+</button>
+                    <button onClick={() => onAdd(item)} className="w-7 h-7 rounded-full bg-gold flex items-center justify-center text-navy font-bold text-sm hover:bg-gold-light transition-colors">+</button>
                   </div>
                 </div>
               ))}
             </div>
-
-            {/* Summary + proceed */}
             {cartItems.length > 0 && (
               <div className="px-5 py-4 border-t border-cream-dark space-y-3">
                 <div className="flex justify-between font-bold text-navy text-lg">
@@ -111,9 +266,11 @@ function CartDrawer({ cart, meals, onAdd, onRemove, onClose, onCheckout, isCheck
               </div>
             )}
           </>
-        ) : (
+        )}
+
+        {/* Checkout form */}
+        {step === 'checkout' && (
           <>
-            {/* Checkout form */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
               {/* Order summary */}
               <div className="bg-cream rounded-xl p-4 space-y-2">
@@ -130,15 +287,19 @@ function CartDrawer({ cart, meals, onAdd, onRemove, onClose, onCheckout, isCheck
                 </div>
               </div>
 
-              {/* Table / location */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                  {error}
+                </div>
+              )}
+
               <div>
-                <label className="block text-sm font-medium text-navy mb-1.5">Table Number / Location</label>
+                <label className="block text-sm font-medium text-navy mb-1.5">Table / Location</label>
                 <input value={tableNo} onChange={e => setTableNo(e.target.value)}
                   placeholder="e.g. Table 5, Poolside, Room 204..."
                   className="w-full px-4 py-3 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy transition-colors" />
               </div>
 
-              {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-navy mb-1.5">Special Instructions</label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)}
@@ -146,7 +307,6 @@ function CartDrawer({ cart, meals, onAdd, onRemove, onClose, onCheckout, isCheck
                   className="w-full px-4 py-3 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy transition-colors resize-none" />
               </div>
 
-              {/* Payment method */}
               <div>
                 <label className="block text-sm font-medium text-navy mb-2">Payment Method</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -155,7 +315,7 @@ function CartDrawer({ cart, meals, onAdd, onRemove, onClose, onCheckout, isCheck
                     { id: 'cash', icon: '💵', label: 'Cash' },
                     { id: 'card', icon: '💳', label: 'Card' },
                   ].map(m => (
-                    <button key={m.id} onClick={() => setPayMethod(m.id)}
+                    <button key={m.id} onClick={() => { setPayMethod(m.id); setError(''); }}
                       className={`py-3 rounded-xl border-2 text-sm font-semibold transition-all flex flex-col items-center gap-1 ${payMethod === m.id ? 'border-gold bg-gold/10 text-navy' : 'border-cream-dark text-muted hover:border-gold/40'}`}>
                       <span className="text-xl">{m.icon}</span>
                       <span>{m.label}</span>
@@ -166,31 +326,39 @@ function CartDrawer({ cart, meals, onAdd, onRemove, onClose, onCheckout, isCheck
 
               {payMethod === 'mpesa' && (
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-1.5">M-Pesa Phone Number</label>
+                  <label className="block text-sm font-medium text-navy mb-1.5">Safaricom Number</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted text-sm">🇰🇪</span>
                     <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)}
                       placeholder="0712 345 678"
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-cream border border-cream-dark focus:border-gold focus:outline-none text-navy transition-colors" />
                   </div>
+                  <p className="text-xs text-muted mt-1">You'll receive an STK push — enter your PIN to pay</p>
                 </div>
               )}
 
               {payMethod === 'cash' && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-sm text-yellow-800">
-                  💵 Please pay at the counter or to your waiter. Show this order to staff.
+                  💵 Pay at the counter or to your waiter. Show this order to staff.
+                </div>
+              )}
+
+              {payMethod === 'card' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800">
+                  💳 Pay by card at the counter. Our staff will bring the card machine to your table.
                 </div>
               )}
             </div>
 
             <div className="px-5 py-4 border-t border-cream-dark space-y-2">
-              <button
-                onClick={() => onCheckout({ tableNo, notes, payMethod, mpesaPhone, total, cartItems })}
-                disabled={isCheckingOut}
+              <button onClick={handleConfirmOrder} disabled={isCheckingOut}
                 className="w-full bg-gold hover:bg-gold-light disabled:bg-gold/50 text-navy font-bold py-4 rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg shadow-gold/20">
-                {isCheckingOut ? 'Placing Order...' : `Confirm Order · KES ${total.toLocaleString()}`}
+                {isCheckingOut ? 'Placing Order...' :
+                  payMethod === 'mpesa' ? `Pay KES ${total.toLocaleString()} via M-Pesa` :
+                  payMethod === 'cash' ? `Place Order · Pay Cash` :
+                  `Place Order · Pay by Card`}
               </button>
-              <button onClick={() => setStep('cart')} className="w-full text-muted hover:text-navy text-sm py-2 transition-colors">
+              <button onClick={() => { setStep('cart'); setError(''); }} className="w-full text-muted hover:text-navy text-sm py-2 transition-colors">
                 ← Back to Order
               </button>
             </div>
@@ -516,7 +684,6 @@ export default function Meals() {
       {showCart && (
         <CartDrawer
           cart={cart}
-          meals={meals || []}
           onAdd={addToCart}
           onRemove={removeFromCart}
           onClose={() => setShowCart(false)}

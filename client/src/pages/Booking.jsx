@@ -102,7 +102,7 @@ export default function Booking() {
     if (paymentMethod === 'mpesa') {
       if (!mpesaPhone.trim()) return setError('Please enter your M-Pesa phone number.');
       const phone = mpesaPhone.replace(/\s/g, '');
-      if (!/^(07|01|\+2547|\+2541)\d{8}$/.test(phone)) return setError('Enter a valid Kenyan phone number (e.g. 0712 345 678).');
+      if (!/^(\+?254|0)\d{9}$/.test(phone)) return setError('Enter a valid Kenyan phone number (e.g. 0712 345 678 or 0769 113 931).');
 
       setMpesaWaiting(true);
       setMpesaStatus('sending');
@@ -622,43 +622,44 @@ export default function Booking() {
                   </button>
                 </div>
 
-                {/* QR Code — M-Pesa PayBill or Booking Reference */}
+                {/* QR Code — Staff Check-in Scanner */}
                 <div className="border-t border-cream-dark pt-5">
-                  <p className="text-xs text-muted uppercase tracking-widest mb-3 text-center">
-                    {paymentMethod === 'pay-on-arrival' ? 'Pay with M-Pesa QR at Check-in' : 'Your Booking QR Code'}
+                  <p className="text-xs text-muted uppercase tracking-widest mb-3 text-center font-semibold">
+                    🎫 Your Check-in QR Code
                   </p>
-                  <div className="flex justify-center">
-                    <div className="bg-white p-3 rounded-2xl border-2 border-gold/20 shadow-sm inline-block">
+                  <div className="flex justify-center mb-3">
+                    <div className="bg-white p-4 rounded-2xl border-2 border-gold/30 shadow-lg inline-block">
                       <QRCodeSVG
-                        value={
-                          paymentMethod === 'pay-on-arrival'
-                            // M-Pesa PayBill QR — scan to pay at front desk
-                            ? `mpesa://pay?businessNumber=${174379}&accountNumber=AZURA-${checkIn?.replace(/-/g,'')}&amount=${totalPrice}`
-                            // Booking reference QR for confirmed bookings
-                            : JSON.stringify({
-                                hotel: 'Azura Haven',
-                                room: room.name,
-                                checkIn,
-                                checkOut,
-                                guests,
-                                total: `KES ${totalPrice.toLocaleString()}`,
-                                guest: user?.name,
-                                email: user?.email,
-                                ref: `AH-${Date.now().toString(36).toUpperCase()}`,
-                              })
-                        }
-                        size={150}
+                        value={JSON.stringify({
+                          type: 'AZURA_CHECKIN',
+                          bookingRef: `AH-${Date.now().toString(36).toUpperCase()}`,
+                          guest: user?.name || 'Guest',
+                          email: user?.email || '',
+                          room: room.name,
+                          roomId,
+                          checkIn,
+                          checkOut,
+                          guests,
+                          totalPaid: `KES ${totalPrice.toLocaleString()}`,
+                          paymentMethod: paymentMethod === 'pay-on-arrival' ? 'Pay on Arrival' : paymentMethod,
+                          paymentStatus: paymentMethod === 'pay-on-arrival' ? 'pending' : 'paid',
+                          mpesaPhone: mpesaPhone || '',
+                          issuedAt: new Date().toISOString(),
+                        })}
+                        size={160}
                         bgColor="#FFFFFF"
                         fgColor="#1B2A4A"
-                        level="M"
+                        level="H"
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-muted text-center mt-2">
-                    {paymentMethod === 'pay-on-arrival'
-                      ? 'Scan at front desk to pay via M-Pesa · Shortcode: 174379'
-                      : 'Show at reception for express check-in'}
-                  </p>
+                  <div className="bg-cream rounded-xl p-3 text-center space-y-1">
+                    <p className="text-xs font-semibold text-navy">Show this QR code at the front desk</p>
+                    <p className="text-xs text-muted">Staff will scan it to verify your booking and hand you the room key</p>
+                    {paymentMethod === 'pay-on-arrival' && (
+                      <p className="text-xs text-orange-600 font-medium mt-1">⚠️ Payment of KES {totalPrice.toLocaleString()} due at check-in</p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
