@@ -1,0 +1,38 @@
+type User @table {
+  username: String!
+  email: String!
+  createdAt: Timestamp!
+  bio: String
+  profilePictureUrl: String
+}
+
+type Category @table {
+  name: String!
+  description: String
+}
+
+type Hole @table {
+  name: String!
+  latitude: Float!
+  longitude: Float!
+  type: Category!
+  isPublic: Boolean!
+  createdAt: Timestamp!
+  description: String
+  dangerLevel: String
+  creator: User
+}
+
+type HolePhoto @table {
+  imageUrl: String!
+  createdAt: Timestamp!
+  caption: String
+  hole: Hole!
+}
+
+type Comment @table {
+  content: String!
+  createdAt: Timestamp!
+  author: User!
+  hole: Hole!
+}

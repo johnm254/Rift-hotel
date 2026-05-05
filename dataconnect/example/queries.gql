@@ -1,0 +1,50 @@
+query GetPublicHoles @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  holes(where: {isPublic: {eq: true}}) {
+    id
+    name
+    latitude
+    longitude
+    description
+    type {
+      name
+    }
+    holePhotos {
+      imageUrl
+      caption
+    }
+  }
+}
+
+mutation CreateHole($name: String!, $latitude: Float!, $longitude: Float!, $typeId: UUID!, $isPublic: Boolean!, $description: String, $dangerLevel: String) @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  hole_insert(data: {
+    name: $name,
+    latitude: $latitude,
+    longitude: $longitude,
+    typeId: $typeId,
+    isPublic: $isPublic,
+    description: $description,
+    dangerLevel: $dangerLevel,
+    createdAt_expr: "request.time",
+    creatorId_expr: "auth.uid"
+  })
+}
+
+query GetMyHoles @auth(level: USER) {
+  holes(where: {creatorId: {eq_expr: "auth.uid"}}) {
+    id
+    name
+    latitude
+    longitude
+    isPublic
+    createdAt
+  }
+}
+
+mutation AddHolePhoto($holeId: UUID!, $imageUrl: String!, $caption: String) @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  holePhoto_insert(data: {
+    holeId: $holeId,
+    imageUrl: $imageUrl,
+    caption: $caption,
+    createdAt_expr: "request.time"
+  })
+}
